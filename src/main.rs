@@ -1,9 +1,10 @@
-use error_chain::*;
-use pcap;
-use pcap::{Active, Capture, Device, Offline, Packet, PacketHeader};
-use std::env;
+mod decoder;
+mod error;
 
-error_chain! {}
+use self::decoder::*;
+use self::error::*;
+use pcap;
+use pcap::{Capture, Device, PacketHeader};
 
 fn get_interface(maybe_search: Option<String>) -> Result<Device> {
   for interface in Device::list().unwrap() {
@@ -22,7 +23,7 @@ fn get_interface(maybe_search: Option<String>) -> Result<Device> {
   Err("No interface found".into())
 }
 
-fn start_capture(interface_name: Option<String>) -> Capture<Offline> {
+fn start_capture(interface_name: Option<String>) -> Capture<pcap::Offline> {
   // let dev = get_interface(interface_name).unwrap();
 
   // println!("listening on {}", dev.name);
@@ -45,41 +46,47 @@ enum Status<T> {
 }
 
 fn main() {
-  let mut cap = start_capture(env::args().nth(1));
+  println!(
+    "{:#?}",
+    Frame::parse(&[0x80, 0x00, 0x00, 0x00, 0xff, 0xff, 0xff, 0xff, 0xff, 0xff]).unwrap()
+  );
 
-  let (sender, receiver) = std::sync::mpsc::channel();
+  // use std::env;
+  // let mut cap = start_capture(env::args().nth(1));
 
-  let work_thread = std::thread::spawn(move || loop {
-    let status: Status<PacketWithHeader> = receiver.recv().unwrap();
-    match status {
-      Status::Active(packet) => {
-        println!("{:#?}", packet.header);
-      }
-      Status::Finished => {
-        break;
-      }
-    }
-  });
+  // let (sender, receiver) = std::sync::mpsc::channel();
 
-  loop {
-    match cap.next() {
-      Err(err) => match err {
-        pcap::Error::NoMorePackets => break,
-        _ => {
-          panic!("{}", err);
-        }
-      },
-      Ok(packet) => {
-        sender
-          .send(Status::Active(PacketWithHeader {
-            header: *packet.header,
-            data: packet.data.to_vec(),
-          }))
-          .unwrap();
-      }
-    }
-  }
+  // let work_thread = std::thread::spawn(move || loop {
+  //   let status: Status<PacketWithHeader> = receiver.recv().unwrap();
+  //   match status {
+  //     Status::Active(packet) => {
+  //       println!("{:#?}", packet.header);
+  //     }
+  //     Status::Finished => {
+  //       break;
+  //     }
+  //   }
+  // });
 
-  sender.send(Status::Finished).unwrap();
-  work_thread.join().unwrap()
+  // loop {
+  //   match cap.next() {
+  //     Err(err) => match err {
+  //       pcap::Error::NoMorePackets => break,
+  //       _ => {
+  //         panic!("{}", err);
+  //       }
+  //     },
+  //     Ok(packet) => {
+  //       sender
+  //         .send(Status::Active(PacketWithHeader {
+  //           header: *packet.header,
+  //           data: packet.data.to_vec(),
+  //         }))
+  //         .unwrap();
+  //     }
+  //   }
+  // }
+
+  // sender.send(Status::Finished).unwrap();
+  // work_thread.join().unwrap()
 }
