@@ -11,5 +11,8 @@
   },
   "dependencies": {
     "ws": "^6.1.2"
+  },
+  "devDependencies": {
+    "parcel-bundler": "^1.11.0"
   }
 }
