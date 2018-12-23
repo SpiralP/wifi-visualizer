@@ -7,4 +7,3 @@ edition = "2018"
 [dependencies]
 error-chain = "0.12.0"
 pcap = { path = "../rust-pcap" }
-enum_primitive = "0.1.1"
