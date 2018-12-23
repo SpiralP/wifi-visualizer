@@ -12,7 +12,7 @@ impl MacAddress {
 impl std::fmt::Debug for MacAddress {
   fn fmt(&self, formatter: &mut std::fmt::Formatter) -> std::result::Result<(), std::fmt::Error> {
     formatter.write_fmt(format_args!(
-      "{:X}:{:X}:{:X}:{:X}:{:X}:{:X}",
+      "{:0>2X}:{:0>2X}:{:0>2X}:{:0>2X}:{:0>2X}:{:0>2X}",
       self.0[0], self.0[1], self.0[2], self.0[3], self.0[4], self.0[5],
     ))?;
     Ok(())

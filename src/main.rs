@@ -99,18 +99,6 @@ fn main() {
     0x1c, 0xf8, 0xc0, 0x9b, 0x07, 0x7f, 0xc3, 0x1b, 0xc7, 0x21, 0x64, 0x4e, 0xdb,
   ];
 
-  // println!("{:#?}", Frame::parse(beacon).unwrap());
-  // let serialized = serde_json::to_string(&Frame::parse(beacon).unwrap()).unwrap();
-  // println!("{:#?}", serialized);
-
-  // println!("{:#?}", Frame::parse(probe_response_retry).unwrap());
-  // let serialized = serde_json::to_string(&Frame::parse(probe_response_retry).unwrap()).unwrap();
-  // println!("{:#?}", serialized);
-
-  // println!("{:#?}", Frame::parse(data_from_ds).unwrap());
-  // let serialized = serde_json::to_string(&Frame::parse(data_from_ds).unwrap()).unwrap();
-  // println!("{:#?}", serialized);
-
   listen("127.0.0.1:3012", |out| {
     // new connection
 
@@ -120,9 +108,10 @@ fn main() {
 
       if msg.into_text().unwrap() == "test" {
         for frame in &[&beacon[..], &probe_response_retry[..], &data_from_ds[..]] {
-          out
-            .send(serde_json::to_string(&Frame::parse(frame).unwrap()).unwrap())
-            .unwrap();
+          let parsed = Frame::parse(frame).unwrap();
+          println!("{:#?}", parsed);
+
+          out.send(serde_json::to_string(&parsed).unwrap()).unwrap();
         }
       }
 
