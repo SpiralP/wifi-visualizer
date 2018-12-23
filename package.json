@@ -5,7 +5,9 @@
   "author": "SpiralP <spiral.palmer@gmail.com>",
   "license": "MIT",
   "scripts": {
-    "start": "cargo run \"\\Device\\NPF_{1207900A-6848-40D9-B1C2-860E3F27FE74}\""
+    "start": "cargo run \"\\Device\\NPF_{1207900A-6848-40D9-B1C2-860E3F27FE74}\"",
+    "watch": "parcel web/index.html",
+    "build": "parcel build web/index.html"
   },
   "dependencies": {
     "ws": "^6.1.2"
