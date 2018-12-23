@@ -1,6 +1,7 @@
 use crate::error::*;
+use serde_derive::*;
 
-#[derive(Debug)]
+#[derive(Serialize, Debug)]
 pub enum Version {
   Standard,
 }

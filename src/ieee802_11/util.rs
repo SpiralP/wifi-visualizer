@@ -1,3 +1,5 @@
+use serde::ser::*;
+
 #[derive(Copy, Clone)]
 pub struct MacAddress([u8; 6]);
 
@@ -14,5 +16,14 @@ impl std::fmt::Debug for MacAddress {
       self.0[0], self.0[1], self.0[2], self.0[3], self.0[4], self.0[5],
     ))?;
     Ok(())
+  }
+}
+
+impl Serialize for MacAddress {
+  fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+  where
+    S: Serializer,
+  {
+    Ok(serializer.serialize_str(&format!("{:?}", self))?)
   }
 }
