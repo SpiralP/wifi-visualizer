@@ -24,16 +24,17 @@ fn get_interface(maybe_search: Option<String>) -> Result<Device> {
   Err("No interface found".into())
 }
 
-fn start_capture(interface_name: Option<String>) -> Capture<pcap::Offline> {
-  // let dev = get_interface(interface_name).unwrap();
+fn start_capture(interface_name: Option<String>) -> Capture<pcap::Active> {
+  let dev = get_interface(interface_name).unwrap();
 
-  // println!("listening on {}", dev.name);
+  println!("listening on {}", dev.name);
 
-  Capture::from_file(r"D:\wpa\school\c1-02 (2).cap").unwrap()
-  // .promisc(true)
-  // .open()
-  // .unwrap()
-  // .immediate_mode(true)
+  Capture::from_device(dev)
+    .unwrap()
+    .promisc(true)
+    .open()
+    .unwrap()
+    .immediate_mode(true)
 }
 
 struct PacketWithHeader {
@@ -106,56 +107,98 @@ fn main() {
       // incoming message
       println!("incoming message {:#?}", msg);
 
-      if msg.into_text().unwrap() == "test" {
-        for frame in &[&beacon[..], &probe_response_retry[..], &data_from_ds[..]] {
-          let parsed = Frame::parse(frame).unwrap();
-          println!("{:#?}", parsed);
+      match msg.into_text().unwrap().as_str() {
+        "test" => {
+          for frame in &[&beacon[..], &probe_response_retry[..], &data_from_ds[..]] {
+            let parsed = Frame::parse(frame).unwrap();
+            println!("{:#?}", parsed);
 
-          out.send(serde_json::to_string(&parsed).unwrap()).unwrap();
+            out.send(serde_json::to_string(&parsed).unwrap()).unwrap();
+          }
         }
+        "file" => {
+          // use std::env;
+          // let mut cap = start_capture(env::args().nth(1));
+
+          let mut cap = Capture::from_file(r"D:\wpa\school\c1-02 (2).cap").unwrap();
+
+          let (sender, receiver) = std::sync::mpsc::channel();
+
+          let _work_thread = {
+            let out = out.clone();
+            std::thread::spawn(move || {
+              // let mut last_time = 0;
+              loop {
+                let status: Status<PacketWithHeader> = receiver.recv().unwrap();
+                match status {
+                  Status::Active(packet) => {
+                    // println!("{:#?}", packet.header);
+
+                    // let current_time = (packet.header.ts.tv_sec as u64) * 100_0000u64
+                    //   + (packet.header.ts.tv_usec as u64);
+                    // if last_time != 0 {
+                    //   let diff = current_time.checked_sub(last_time).unwrap_or(0);
+                    //   std::thread::sleep(std::time::Duration::from_micros(diff));
+                    // }
+                    // last_time = current_time;
+
+                    let parsed_frame = Frame::parse(&packet.data).unwrap();
+
+                    if let Frame::Basic(ref frame) = parsed_frame {
+                      if let Type::Control(ref _subtype) = frame.frame_control.type_ {
+                        continue;
+                      }
+                    }
+
+                    out
+                      .send(serde_json::to_string(&parsed_frame).unwrap())
+                      .unwrap();
+                  }
+                  Status::Finished => {
+                    break;
+                  }
+                }
+              }
+              println!("close");
+              out.close(ws::CloseCode::Normal).unwrap();
+            })
+          };
+
+          let _sniff_thread = {
+            std::thread::spawn(move || {
+              loop {
+                match cap.next() {
+                  Err(err) => match err {
+                    pcap::Error::NoMorePackets => break,
+                    _ => {
+                      panic!("{}", err);
+                    }
+                  },
+                  Ok(packet) => {
+                    sender
+                      .send(Status::Active(PacketWithHeader {
+                        header: *packet.header,
+                        data: packet.data.to_vec(),
+                      }))
+                      .unwrap();
+                  }
+                }
+              }
+              sender.send(Status::Finished).unwrap();
+            })
+          };
+
+          // sniff_thread.join().unwrap();
+          // work_thread.join().unwrap();
+
+          return Ok(()); // don't close yet
+        }
+        _ => {}
       }
 
+      println!("close");
       out.close(ws::CloseCode::Normal)
     }
   })
   .unwrap();
-
-  // use std::env;
-  // let mut cap = start_capture(env::args().nth(1));
-
-  // let (sender, receiver) = std::sync::mpsc::channel();
-
-  // let work_thread = std::thread::spawn(move || loop {
-  //   let status: Status<PacketWithHeader> = receiver.recv().unwrap();
-  //   match status {
-  //     Status::Active(packet) => {
-  //       println!("{:#?}", packet.header);
-  //     }
-  //     Status::Finished => {
-  //       break;
-  //     }
-  //   }
-  // });
-
-  // loop {
-  //   match cap.next() {
-  //     Err(err) => match err {
-  //       pcap::Error::NoMorePackets => break,
-  //       _ => {
-  //         panic!("{}", err);
-  //       }
-  //     },
-  //     Ok(packet) => {
-  //       sender
-  //         .send(Status::Active(PacketWithHeader {
-  //           header: *packet.header,
-  //           data: packet.data.to_vec(),
-  //         }))
-  //         .unwrap();
-  //     }
-  //   }
-  // }
-
-  // sender.send(Status::Finished).unwrap();
-  // work_thread.join().unwrap()
 }
