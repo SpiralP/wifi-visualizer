@@ -113,7 +113,9 @@ fn main() {
             let parsed = Frame::parse(frame).unwrap();
             println!("{:#?}", parsed);
 
-            out.send(serde_json::to_string(&parsed).unwrap()).unwrap();
+            let json = serde_json::to_string(&parsed).unwrap();
+            println!("{:#?}", &json);
+            out.send(json).unwrap();
           }
         }
         "file" => {

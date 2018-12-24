@@ -81,9 +81,34 @@ declare interface BasicFrame {
   bssid?: MacAddress;
 }
 
+declare interface BeaconInfo {
+  fixed_parameters: FixedParameters;
+  tagged_parameters: TaggedParameters;
+}
+
+declare interface TaggedParameters {
+  tags: Array<Tag>;
+}
+
+declare interface FixedParameters {
+  timestamp: number;
+  beacon_interval: number; // seconds
+  capabilities_info: CapabilitiesInfo;
+}
+
+declare interface CapabilitiesInfo {}
+
+declare interface Tag {
+  number: number;
+  length: number;
+  data: Array<number>;
+}
+
 declare interface BeaconFrame extends BasicFrame {
   fragment_number: number;
   sequence_number: number;
+
+  beacon_info: BeaconInfo;
 }
 
 declare interface Frame {

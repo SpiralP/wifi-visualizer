@@ -69,14 +69,6 @@ const network = new vis.Network(
   document.getElementById("root")!,
   { nodes, edges },
   {
-    groups: {
-      access_point: {
-        size: 30,
-      },
-      station: {
-        size: 20,
-      },
-    },
     nodes: {
       shape: "icon",
       icon: {
@@ -105,58 +97,68 @@ function hash(mac1: string, mac2: string): string {
   else return mac2 + mac1;
 }
 
-declare global {
-  interface Window {
-    node_cache: {};
-    edge_cache: {};
-  }
-}
-
 const node_cache = {};
 const edge_cache = {};
+// @ts-ignore
 window.node_cache = node_cache;
+// @ts-ignore
 window.edge_cache = edge_cache;
 let frames = 0;
 
-function handleFrame(frame: BasicFrame) {
+function handleFrame(data: Frame) {
+  const frame = data.Beacon || data.Basic!;
+  // console.log(frame.transmitter_address, "->", frame.receiver_address);
+  if (data.Beacon) console.log(data.Beacon.beacon_info);
+
   // console.log(frame);
 
   // transmitter -> receiver
   const { transmitter_address, receiver_address } = frame;
-  // const subtype = frame.frame_control.type_.Management!;
+  const subtype = frame.frame_control.type_.Management;
 
-  if (receiver_address && isBroadcast(receiver_address)) return;
+  if (transmitter_address) {
+    const beacon = data.Beacon;
 
-  // const transmitter_node = nodes.get(transmitter_address);
-  if (transmitter_address && !node_cache[transmitter_address]) {
-    const company = oui(transmitter_address);
-    // if (!company) console.warn(`no oui for ${transmitter_address}`);
+    let ssid;
+    if (beacon) {
+      const ssid_tag = beacon.beacon_info.tagged_parameters.tags.find((tag) => {
+        return tag.number === 0; // SSID
+      });
+      if (ssid_tag) {
+        ssid = Buffer.from(ssid_tag.data).toString();
+      }
+    }
 
-    nodes.add({
-      id: transmitter_address,
-      // label: transmitter_address,
-      group: "access_point",
-      icon: { code: companyToIconCode(company) },
-      hover: true,
-      title: company || transmitter_address,
-    });
-    node_cache[transmitter_address] = true;
+    if (!node_cache[transmitter_address]) {
+      const company = oui(transmitter_address);
+
+      nodes.add({
+        id: transmitter_address,
+        icon: { code: companyToIconCode(company) },
+        hover: true,
+        label: ssid,
+        title: `${company}<br />${transmitter_address}`,
+      });
+      node_cache[transmitter_address] = true;
+    } else {
+      // it already exist
+    }
   }
 
-  // const receiver_node = nodes.get(receiver_address);
-  if (receiver_address && !node_cache[receiver_address]) {
-    const company = oui(receiver_address);
-    // if (!company) console.warn(`no oui for ${receiver_address}`);
+  if (receiver_address) {
+    if (isBroadcast(receiver_address)) return;
 
-    nodes.add({
-      id: receiver_address,
-      // label: receiver_address,
-      group: "station",
-      icon: { code: companyToIconCode(company) },
-      hover: true,
-      title: company || receiver_address,
-    });
-    node_cache[receiver_address] = true;
+    if (!node_cache[receiver_address]) {
+      const company = oui(receiver_address);
+
+      nodes.add({
+        id: receiver_address,
+        icon: { code: companyToIconCode(company) },
+        hover: true,
+        title: `${company}<br />${receiver_address}`,
+      });
+      node_cache[receiver_address] = true;
+    }
   }
 
   if (transmitter_address && receiver_address) {
@@ -179,17 +181,16 @@ function handleFrame(frame: BasicFrame) {
 }
 
 connect(
-  "file",
+  "test",
   (data) => {
-    const frame = data.Beacon || data.Basic!;
-    // console.log(frame.transmitter_address, "->", frame.receiver_address);
-
     frames += 1;
-    handleFrame(frame);
+    handleFrame(data);
   }
-).then(() => {
-  console.log(`${frames} frames`);
-});
+)
+  .then(() => {
+    console.log(`${frames} frames`);
+  })
+  .catch((e) => console.error(e));
 
 // const graphics = Viva.Graph.View.svgGraphics();
 // graphics

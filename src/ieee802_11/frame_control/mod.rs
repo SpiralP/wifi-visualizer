@@ -10,8 +10,12 @@ use serde_derive::*;
 
 #[derive(Serialize, Debug)]
 pub struct FrameControl {
+  #[serde(skip)]
   pub version: Version,
+
   pub type_: Type,
+
+  #[serde(skip)]
   pub flags: Flags,
 }
 

@@ -1,6 +1,8 @@
+mod beacon_info;
 mod frame_control;
 mod util;
 
+pub use self::beacon_info::*;
 pub use self::frame_control::FrameControl;
 pub use self::frame_control::*;
 pub use self::util::*;
@@ -11,6 +13,8 @@ use serde_derive::*;
 #[derive(Serialize, Debug)]
 pub struct BeaconFrame {
   pub frame_control: FrameControl,
+
+  #[serde(skip)]
   pub duration: u16, // microseconds
 
   pub receiver_address: Option<MacAddress>,
@@ -21,13 +25,19 @@ pub struct BeaconFrame {
 
   pub bssid: Option<MacAddress>,
 
+  #[serde(skip)]
   pub fragment_number: u8,
+  #[serde(skip)]
   pub sequence_number: u16,
+
+  pub beacon_info: BeaconInfo,
 }
 
 #[derive(Serialize, Debug)]
 pub struct BasicFrame {
   pub frame_control: FrameControl,
+
+  #[serde(skip)]
   pub duration: u16, // microseconds
 
   pub receiver_address: Option<MacAddress>,
@@ -48,7 +58,7 @@ pub enum Frame {
 impl Frame {
   pub fn parse(bytes: &[u8]) -> Result<Frame> {
     let frame_control = FrameControl::parse(&bytes[0..2])?;
-    let duration = (u16::from(bytes[3]) << 8) | u16::from(bytes[2]);
+    let duration = bytes2_to_u16(&bytes[2..4]);
 
     let addr1 = MacAddress::from(&bytes[4..10]);
 
@@ -129,6 +139,7 @@ impl Frame {
         ManagementSubtype::Beacon => {
           let fragment_number = bytes[22] & 0b0000_1111;
           let sequence_number = ((u16::from(bytes[23]) << 8) | u16::from(bytes[22])) >> 4;
+          let beacon_info = BeaconInfo::parse(&bytes[24..])?;
 
           Ok(Frame::Beacon(BeaconFrame {
             frame_control,
@@ -140,6 +151,7 @@ impl Frame {
             bssid,
             fragment_number,
             sequence_number,
+            beacon_info,
           }))
         }
         _ => Ok(Frame::Basic(BasicFrame {
