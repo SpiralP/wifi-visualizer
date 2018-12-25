@@ -203,20 +203,3 @@ connect(
     console.log(`${frames} frames`);
   })
   .catch((e) => console.error(e));
-
-// const graphics = Viva.Graph.View.svgGraphics();
-// graphics
-//   .node((node) => {
-//     return Viva.Graph.svg("circle")
-//       .attr("r", node.data.size)
-//       .attr("fill", node.data.color);
-//   })
-//   .placeNode((nodeUI, pos) => {
-//     nodeUI.attr("transform", `translate(${pos.x} ${pos.y})`);
-//   });
-
-// const renderer = Viva.Graph.View.renderer(graph, {
-//   container: document.getElementById("root"),
-//   graphics,
-// });
-// renderer.run();
