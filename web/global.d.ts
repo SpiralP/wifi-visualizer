@@ -1,6 +1,4 @@
-declare enum Version {
-  Standard,
-}
+declare type FrameType = "Management" | "Control" | "Data";
 
 declare type ManagementSubtype =
   | "AssociationRequest"
@@ -43,10 +41,14 @@ declare type DataSubtype =
   | "QoSCFPoll = 14" // no data
   | "QoSCFAck"; // no data
 
-declare interface Type {
-  Management?: ManagementSubtype;
-  Control?: ControlSubtype;
-  Data?: DataSubtype;
+declare interface FrameControl {
+  version: Version;
+  type_: FrameType;
+  flags: Flags;
+}
+
+declare enum Version {
+  Standard,
 }
 
 declare interface Flags {
@@ -58,27 +60,6 @@ declare interface Flags {
   more_data: boolean;
   protected: boolean;
   order: boolean;
-}
-
-declare interface FrameControl {
-  version: Version;
-  type_: Type;
-  flags: Flags;
-}
-
-type MacAddress = string;
-
-declare interface BasicFrame {
-  frame_control: FrameControl;
-  duration: number; // microseconds
-
-  receiver_address?: MacAddress;
-  transmitter_address?: MacAddress;
-
-  destination_address?: MacAddress;
-  source_address?: MacAddress;
-
-  bssid?: MacAddress;
 }
 
 declare interface BeaconInfo {
@@ -104,14 +85,48 @@ declare interface Tag {
   data: Array<number>;
 }
 
-declare interface BeaconFrame extends BasicFrame {
-  fragment_number: number;
-  sequence_number: number;
+type MacAddress = string;
+
+declare interface BasicFrame {
+  type: FrameType;
+  subtype: ManagementSubtype | ControlSubtype | DataSubtype;
+
+  receiver_address?: MacAddress;
+  transmitter_address?: MacAddress;
+
+  destination_address?: MacAddress;
+  source_address?: MacAddress;
+
+  bssid?: MacAddress;
+}
+
+declare interface ManagementFrame extends BasicFrame {
+  type: "Management";
+  subtype: ManagementSubtype;
+}
+
+declare interface ControlFrame extends BasicFrame {
+  type: "Control";
+  subtype: ControlSubtype;
+}
+
+declare interface DataFrame extends BasicFrame {
+  type: "Data";
+  subtype: DataSubtype;
+}
+
+declare interface BeaconFrame extends ManagementFrame {
+  type: "Management";
+  subtype: "Beacon";
 
   beacon_info: BeaconInfo;
 }
-
-declare interface Frame {
-  Basic?: BasicFrame;
-  Beacon?: BeaconFrame;
+declare interface OtherManagementFrame extends ManagementFrame {
+  subtype: Exclude<ManagementSubtype, "Beacon">;
 }
+
+declare type Frame =
+  | BeaconFrame
+  | OtherManagementFrame
+  | ControlFrame
+  | DataFrame;

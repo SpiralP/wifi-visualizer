@@ -2,7 +2,8 @@ use crate::error::*;
 use serde_derive::*;
 
 #[derive(Serialize, Debug)]
-pub enum Type {
+#[serde(tag = "type", content = "subtype")]
+pub enum FrameType {
   Management(ManagementSubtype),
   Control(ControlSubtype),
   Data(DataSubtype),

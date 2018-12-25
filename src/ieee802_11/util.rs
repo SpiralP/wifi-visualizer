@@ -1,7 +1,7 @@
 use serde::ser::*;
 use std::mem::transmute;
 
-#[derive(Copy, Clone)]
+#[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd, Hash)]
 pub struct MacAddress([u8; 6]);
 
 impl MacAddress {
@@ -10,7 +10,7 @@ impl MacAddress {
   }
 }
 
-impl std::fmt::Debug for MacAddress {
+impl std::fmt::Display for MacAddress {
   fn fmt(&self, formatter: &mut std::fmt::Formatter) -> std::result::Result<(), std::fmt::Error> {
     formatter.write_fmt(format_args!(
       "{:0>2X}:{:0>2X}:{:0>2X}:{:0>2X}:{:0>2X}:{:0>2X}",
@@ -25,7 +25,7 @@ impl Serialize for MacAddress {
   where
     S: Serializer,
   {
-    Ok(serializer.serialize_str(&format!("{:?}", self))?)
+    Ok(serializer.serialize_str(&format!("{}", self))?)
   }
 }
 
@@ -49,4 +49,18 @@ pub fn bytes4_to_u32(bytes: &[u8]) -> u32 {
 pub fn bytes2_to_u16(bytes: &[u8]) -> u16 {
   let n: u16 = unsafe { transmute([bytes[0], bytes[1]]) };
   n.to_le()
+}
+
+pub fn hash_macs(mac1: MacAddress, mac2: MacAddress) -> String {
+  if mac1 >= mac2 {
+    format!("{}{}", mac1, mac2).to_string()
+  } else {
+    format!("{}{}", mac2, mac1).to_string()
+  }
+}
+
+pub fn is_broadcast(mac: MacAddress) -> bool {
+  let mac = mac.to_string();
+  mac == "FF:FF:FF:FF:FF:FF" || mac.starts_with("01:00:5E")
+  // multicast
 }

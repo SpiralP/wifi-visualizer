@@ -1,18 +1,18 @@
-mod beacon_info;
-mod frame_control;
-mod util;
+pub mod beacon_info;
+pub mod frame_control;
+pub mod util;
 
 pub use self::beacon_info::*;
 pub use self::frame_control::FrameControl;
-pub use self::frame_control::*;
+pub use self::frame_control::{ControlSubtype, FrameType, ManagementSubtype};
 pub use self::util::*;
 use crate::error::*;
-use error_chain::*;
 use serde_derive::*;
 
 #[derive(Serialize, Debug)]
-pub struct BeaconFrame {
-  pub frame_control: FrameControl,
+pub struct BasicFrame {
+  #[serde(flatten)]
+  pub type_: FrameType,
 
   #[serde(skip)]
   pub duration: u16, // microseconds
@@ -24,6 +24,12 @@ pub struct BeaconFrame {
   pub source_address: Option<MacAddress>,
 
   pub bssid: Option<MacAddress>,
+}
+
+#[derive(Serialize, Debug)]
+pub struct BeaconFrame {
+  #[serde(flatten)]
+  pub basic_frame: BasicFrame,
 
   #[serde(skip)]
   pub fragment_number: u8,
@@ -34,22 +40,7 @@ pub struct BeaconFrame {
 }
 
 #[derive(Serialize, Debug)]
-pub struct BasicFrame {
-  pub frame_control: FrameControl,
-
-  #[serde(skip)]
-  pub duration: u16, // microseconds
-
-  pub receiver_address: Option<MacAddress>,
-  pub transmitter_address: Option<MacAddress>,
-
-  pub destination_address: Option<MacAddress>,
-  pub source_address: Option<MacAddress>,
-
-  pub bssid: Option<MacAddress>,
-}
-
-#[derive(Serialize, Debug)]
+#[serde(untagged)]
 pub enum Frame {
   Basic(BasicFrame),
   Beacon(BeaconFrame),
@@ -72,7 +63,7 @@ impl Frame {
 
     let mut other = false;
     match frame_control.type_ {
-      Type::Control(ref subtype) => {
+      FrameType::Control(ref subtype) => {
         match subtype {
           ControlSubtype::ACK | ControlSubtype::CTS => {
             // only receiver
@@ -134,45 +125,31 @@ impl Frame {
       }
     }
 
-    match frame_control.type_ {
-      Type::Management(ref subtype) => match subtype {
-        ManagementSubtype::Beacon => {
-          let fragment_number = bytes[22] & 0b0000_1111;
-          let sequence_number = ((u16::from(bytes[23]) << 8) | u16::from(bytes[22])) >> 4;
-          let beacon_info = BeaconInfo::parse(&bytes[24..])?;
+    let basic_frame = BasicFrame {
+      type_: frame_control.type_,
+      duration,
+      receiver_address,
+      destination_address,
+      transmitter_address,
+      source_address,
+      bssid,
+    };
 
-          Ok(Frame::Beacon(BeaconFrame {
-            frame_control,
-            duration,
-            receiver_address,
-            destination_address,
-            transmitter_address,
-            source_address,
-            bssid,
-            fragment_number,
-            sequence_number,
-            beacon_info,
-          }))
-        }
-        _ => Ok(Frame::Basic(BasicFrame {
-          frame_control,
-          duration,
-          receiver_address,
-          destination_address,
-          transmitter_address,
-          source_address,
-          bssid,
-        })),
-      },
-      _ => Ok(Frame::Basic(BasicFrame {
-        frame_control,
-        duration,
-        receiver_address,
-        destination_address,
-        transmitter_address,
-        source_address,
-        bssid,
-      })),
+    if let FrameType::Management(ref subtype) = basic_frame.type_ {
+      if let ManagementSubtype::Beacon = subtype {
+        let fragment_number = bytes[22] & 0b0000_1111;
+        let sequence_number = ((u16::from(bytes[23]) << 8) | u16::from(bytes[22])) >> 4;
+        let beacon_info = BeaconInfo::parse(&bytes[24..])?;
+
+        return Ok(Frame::Beacon(BeaconFrame {
+          basic_frame,
+          fragment_number,
+          sequence_number,
+          beacon_info,
+        }));
+      }
     }
+
+    Ok(Frame::Basic(basic_frame))
   }
 }

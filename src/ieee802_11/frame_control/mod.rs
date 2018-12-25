@@ -3,8 +3,8 @@ mod type_;
 mod version;
 
 pub use self::flags::*;
-pub use self::type_::*;
-pub use self::version::*;
+pub use self::type_::{ControlSubtype, DataSubtype, FrameType, ManagementSubtype};
+pub use self::version::Version;
 use crate::error::*;
 use serde_derive::*;
 
@@ -13,7 +13,7 @@ pub struct FrameControl {
   #[serde(skip)]
   pub version: Version,
 
-  pub type_: Type,
+  pub type_: FrameType,
 
   #[serde(skip)]
   pub flags: Flags,
@@ -27,9 +27,9 @@ impl FrameControl {
     let flags = Flags::parse(bytes[1])?;
 
     let type_ = match type_ {
-      0 => Type::Management(ManagementSubtype::parse(subtype)?),
-      1 => Type::Control(ControlSubtype::parse(subtype)?),
-      2 => Type::Data(DataSubtype::parse(subtype)?),
+      0 => FrameType::Management(ManagementSubtype::parse(subtype)?),
+      1 => FrameType::Control(ControlSubtype::parse(subtype)?),
+      2 => FrameType::Data(DataSubtype::parse(subtype)?),
       _ => bail!("invalid type"),
     };
 

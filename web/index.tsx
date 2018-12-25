@@ -76,11 +76,15 @@ const network = new vis.Network(
         code: iconNameToCode.circle,
       },
       // shadow: true,
+      // shapeProperties: {
+      //   interpolation: false, // 'true' for intensive zooming
+      // },
     },
     edges: {
       width: 2,
       // shadow: true,
     },
+    layout: { improvedLayout: false },
   }
 );
 
@@ -107,6 +111,9 @@ let frames = 0;
 
 function handleFrame(data: Frame) {
   const frame = data.Beacon || data.Basic!;
+  if (data.type === "Management" && data.subtype === "Beacon") {
+    data.beacon_info;
+  }
   // console.log(frame.transmitter_address, "->", frame.receiver_address);
   if (data.Beacon) console.log(data.Beacon.beacon_info);
 
@@ -132,16 +139,19 @@ function handleFrame(data: Frame) {
     if (!node_cache[transmitter_address]) {
       const company = oui(transmitter_address);
 
-      nodes.add({
+      const o = {
         id: transmitter_address,
         icon: { code: companyToIconCode(company) },
         hover: true,
         label: ssid,
         title: `${company}<br />${transmitter_address}`,
-      });
-      node_cache[transmitter_address] = true;
+      };
+      nodes.add(o);
+      node_cache[transmitter_address] = o;
     } else {
       // it already exist
+      if (ssid && !node_cache[transmitter_address].label)
+        nodes.update({ id: transmitter_address, label: ssid });
     }
   }
 
@@ -181,10 +191,12 @@ function handleFrame(data: Frame) {
 }
 
 connect(
-  "test",
+  "live",
   (data) => {
+    console.log(data);
+
     frames += 1;
-    handleFrame(data);
+    // handleFrame(data);
   }
 )
   .then(() => {
