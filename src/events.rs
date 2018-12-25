@@ -3,11 +3,10 @@ use crate::ieee802_11::*;
 use serde_derive::*;
 use std::collections::HashMap;
 use std::collections::HashSet;
-use std::collections::VecDeque;
 
 #[derive(Serialize, Debug)]
 #[serde(tag = "type", content = "data")] // {type: "NewAddress", data: "aa:aa:aa"}
-enum Event {
+pub enum Event {
   NewAddress(MacAddress),
   Connection(MacAddress, MacAddress),
   Leave(MacAddress, MacAddress), // x leaves y
@@ -15,24 +14,27 @@ enum Event {
 }
 
 #[derive(Serialize, Debug, PartialEq, Copy, Clone)]
-enum Kind {
+pub enum Kind {
   AccessPoint,
   Station,
 }
 
-#[derive(Default, Debug)]
 pub struct Store {
   addresses: HashSet<MacAddress>,
   connections: HashSet<String>,
   kinds: HashMap<MacAddress, Kind>,
 
-  events: VecDeque<Event>,
+  event_handler: Box<FnMut(Event)>,
 }
 
 impl Store {
-  pub fn new() -> Store {
+  pub fn new(event_handler: Box<FnMut(Event)>) -> Store {
     Store {
-      ..Default::default()
+      addresses: HashSet::new(),
+      connections: HashSet::new(),
+      kinds: HashMap::new(),
+
+      event_handler,
     }
   }
 
@@ -42,7 +44,7 @@ impl Store {
     }
 
     self.addresses.insert(mac);
-    self.events.push_back(Event::NewAddress(mac));
+    (self.event_handler)(Event::NewAddress(mac));
   }
 
   fn add_connection(&mut self, mac1: MacAddress, mac2: MacAddress) {
@@ -53,7 +55,7 @@ impl Store {
     }
 
     self.connections.insert(hash);
-    self.events.push_back(Event::Connection(mac1, mac2));
+    (self.event_handler)(Event::Connection(mac1, mac2));
   }
 
   fn set_kind(&mut self, mac: MacAddress, kind: Kind) {
@@ -64,7 +66,7 @@ impl Store {
     }
 
     self.kinds.insert(mac, kind);
-    self.events.push_back(Event::SetKind(mac, kind));
+    (self.event_handler)(Event::SetKind(mac, kind));
   }
 }
 
@@ -73,6 +75,12 @@ pub fn handle_frame(frame: Frame, store: &mut Store) {
     Frame::Basic(ref frame) => &frame,
     Frame::Beacon(ref frame) => &frame.basic_frame,
   };
+
+  // if let Frame::Basic(ref frame) = parsed_frame {
+  //   if let FrameType::Control(ref _subtype) = frame.type_ {
+  //     continue;
+  //   }
+  // }
 
   if let Some(transmitter_address) = basic_frame.transmitter_address {
     store.add_address(transmitter_address);

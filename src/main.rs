@@ -3,6 +3,7 @@ pub mod events;
 pub mod ieee802_11;
 mod pcap;
 
+use self::events::*;
 use self::ieee802_11::*;
 use self::pcap::{start_file_capture, start_live_capture, PacketWithHeader, Status};
 use ws::listen;
@@ -85,6 +86,15 @@ fn main() {
             let out = out.clone();
             std::thread::spawn(move || {
               // let mut last_time = 0;
+              let mut store = {
+                let out = out.clone();
+                Store::new(Box::new(move |event| {
+                  //
+                  println!("{:#?}", event);
+                  out.send(serde_json::to_string(&event).unwrap()).unwrap();
+                }))
+              };
+
               loop {
                 let status = receiver.recv().unwrap();
                 match status {
@@ -101,15 +111,7 @@ fn main() {
 
                     let parsed_frame = Frame::parse(&packet.data).unwrap();
 
-                    if let Frame::Basic(ref frame) = parsed_frame {
-                      if let FrameType::Control(ref _subtype) = frame.type_ {
-                        continue;
-                      }
-                    }
-
-                    out
-                      .send(serde_json::to_string(&parsed_frame).unwrap())
-                      .unwrap();
+                    handle_frame(parsed_frame, &mut store);
                   }
                   Status::Finished => {
                     break;

@@ -191,7 +191,7 @@ function handleFrame(data: Frame) {
 }
 
 connect(
-  "live",
+  "file",
   (data) => {
     console.log(data);
 
