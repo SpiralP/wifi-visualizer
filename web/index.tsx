@@ -1,5 +1,9 @@
+// TODO import fontawesome for offline
+
 import vis from "vis";
 const oui: (mac: string) => string | null = require("oui");
+const copy = require("clipboard-copy");
+import { hashMacs, isBroadcast, setNamedTimeout } from "./helpers";
 
 const iconNameToCode = {
   broadcast_tower: "\uf519",
@@ -9,17 +13,22 @@ const iconNameToCode = {
   amazon: "\uf270",
   desktop: "\uf108",
   mobile: "\uf10b",
+  tv: "\uf26c",
+  steam: "\uf1b6",
 };
 
 // tslint:disable-next-line:object-literal-key-quotes
 const ouiToIconCode = {
   "Cisco Systems Inc.": iconNameToCode.broadcast_tower,
+  "Belkin International Inc.": iconNameToCode.broadcast_tower,
+  Broadcom: "broadcom",
   "Intel Corporation": iconNameToCode.desktop,
   "LG Electronics (Mobile Communications)": iconNameToCode.android,
   Apple: iconNameToCode.apple,
   "Murata Manufacturing Co. Ltd": iconNameToCode.mobile,
-  Broadcom: iconNameToCode.amazon,
   "Samsung Electro-Mechanics(Thailand)": iconNameToCode.mobile,
+  "Roku, Inc": iconNameToCode.tv,
+  "Valve Corporation": iconNameToCode.steam,
 };
 
 function companyToIconCode(company: string | null) {
@@ -34,7 +43,7 @@ function companyToIconCode(company: string | null) {
   return iconNameToCode.circle;
 }
 
-async function connect(hello: string, callback: (frame: Frame) => void) {
+async function connect(hello: string, callback: (event: FrameEvent) => void) {
   const ws = new WebSocket("ws://localhost:3012/");
 
   ws.onmessage = function message(data) {
@@ -88,115 +97,64 @@ const network = new vis.Network(
   }
 );
 
-function isBroadcast(mac: string): boolean {
-  return (
-    mac === "FF:FF:FF:FF:FF:FF" ||
-    mac.startsWith("01:00:5E") || // multicast
-    false
-  );
-}
+network.moveTo({ scale: 0.4 });
 
-function hash(mac1: string, mac2: string): string {
-  if (mac1 >= mac2) return mac1 + mac2;
-  else return mac2 + mac1;
-}
-
-const node_cache = {};
-const edge_cache = {};
-// @ts-ignore
-window.node_cache = node_cache;
-// @ts-ignore
-window.edge_cache = edge_cache;
-let frames = 0;
-
-function handleFrame(data: Frame) {
-  const frame = data.Beacon || data.Basic!;
-  if (data.type === "Management" && data.subtype === "Beacon") {
-    data.beacon_info;
+network.on("click", (event: { nodes: Array<string>; edges: Array<string> }) => {
+  if (event.nodes.length === 1) {
+    console.log(event);
+    copy(event.nodes[0])
+      .then(() => console.log("copied"))
+      .catch(() => console.warn("failed to copy"));
   }
-  // console.log(frame.transmitter_address, "->", frame.receiver_address);
-  if (data.Beacon) console.log(data.Beacon.beacon_info);
+});
 
-  // console.log(frame);
+// @ts-ignore
+window.network = network;
 
-  // transmitter -> receiver
-  const { transmitter_address, receiver_address } = frame;
-  const subtype = frame.frame_control.type_.Management;
+function handleFrameEvent(event: FrameEvent) {
+  if (event.type === "NewAddress") {
+    const id = event.data;
+    const company = oui(id);
 
-  if (transmitter_address) {
-    const beacon = data.Beacon;
+    nodes.add({
+      id,
+      icon: { code: companyToIconCode(company) },
+      hover: true,
+      title: `${company}<br />${id}`,
+    });
+  } else if (event.type === "Connection") {
+    const from = event.data[0];
+    const to = event.data[1];
 
-    let ssid;
-    if (beacon) {
-      const ssid_tag = beacon.beacon_info.tagged_parameters.tags.find((tag) => {
-        return tag.number === 0; // SSID
-      });
-      if (ssid_tag) {
-        ssid = Buffer.from(ssid_tag.data).toString();
+    edges.add({
+      id: hashMacs(from, to),
+      from,
+      to,
+    });
+  } else if (event.type === "SetKind") {
+    const id = event.data[0];
+    const kind = event.data[1];
+
+    switch (kind) {
+      case "AccessPoint": {
+        nodes.update({ id, icon: { color: "red" } });
+      }
+      case "Station": {
+        nodes.update({ id, icon: { color: "green" } });
       }
     }
-
-    if (!node_cache[transmitter_address]) {
-      const company = oui(transmitter_address);
-
-      const o = {
-        id: transmitter_address,
-        icon: { code: companyToIconCode(company) },
-        hover: true,
-        label: ssid,
-        title: `${company}<br />${transmitter_address}`,
-      };
-      nodes.add(o);
-      node_cache[transmitter_address] = o;
-    } else {
-      // it already exist
-      if (ssid && !node_cache[transmitter_address].label)
-        nodes.update({ id: transmitter_address, label: ssid });
-    }
-  }
-
-  if (receiver_address) {
-    if (isBroadcast(receiver_address)) return;
-
-    if (!node_cache[receiver_address]) {
-      const company = oui(receiver_address);
-
-      nodes.add({
-        id: receiver_address,
-        icon: { code: companyToIconCode(company) },
-        hover: true,
-        title: `${company}<br />${receiver_address}`,
-      });
-      node_cache[receiver_address] = true;
-    }
-  }
-
-  if (transmitter_address && receiver_address) {
-    const id = hash(transmitter_address, receiver_address);
-    if (!edge_cache[id]) {
-      edges.add({
-        id,
-        from: transmitter_address,
-        to: receiver_address,
-        frames: 1,
-      });
-      edge_cache[id] = true;
-    } else {
-      // it already exists
-      const old = edges.get(id) as { frames: number };
-      const my_frames = old.frames + 1;
-      // edges.update({ id, frames: my_frames, width: 2 });
-    }
   }
 }
 
+let frames = 0;
+
 connect(
-  "file",
+  "live",
   (data) => {
     console.log(data);
 
     frames += 1;
-    // handleFrame(data);
+    handleFrameEvent(data);
   }
 )
   .then(() => {

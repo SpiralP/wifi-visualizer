@@ -2,7 +2,9 @@ use crate::error::*;
 use crate::ieee802_11::util::*;
 use ::pcap::Error as PcapError;
 use ::pcap::*;
+use boxfnonce::BoxFnOnce;
 use std::sync::mpsc::*;
+use std::sync::*;
 
 const LINKTYPE_IEEE802_11: i32 = 105;
 const LINKTYPE_IEEE802_11_RADIOTAP: i32 = 127;
@@ -40,6 +42,7 @@ fn get_live_capture(dev: Device) -> Result<Capture<Active>> {
   Ok(
     Capture::from_device(dev)?
       .promisc(true)
+      .timeout(1000)
       .open()?
       .immediate_mode(true),
   )
@@ -53,7 +56,7 @@ fn test_live_capture() {
 
 pub fn start_live_capture(
   interface_name: Option<String>,
-) -> Result<Receiver<Status<PacketWithHeader>>> {
+) -> Result<(Receiver<Status<PacketWithHeader>>, BoxFnOnce<'static, ()>)> {
   let dev = get_interface(interface_name)?;
 
   let cap = get_live_capture(dev)?;
@@ -72,7 +75,9 @@ fn test_file_capture() {
   println!("{:#?}", cap.list_datalinks().unwrap());
 }
 
-pub fn start_file_capture(file_path: &str) -> Result<Receiver<Status<PacketWithHeader>>> {
+pub fn start_file_capture(
+  file_path: &str,
+) -> Result<(Receiver<Status<PacketWithHeader>>, BoxFnOnce<'static, ()>)> {
   let cap = get_file_capture(file_path)?;
 
   Ok(start_capture(cap)?)
@@ -136,7 +141,9 @@ fn test_strip_radiotap() {
 
 fn start_capture<T: ::pcap::Activated + Send + 'static>(
   mut cap: Capture<T>,
-) -> Result<Receiver<Status<PacketWithHeader>>> {
+) -> Result<(Receiver<Status<PacketWithHeader>>, BoxFnOnce<'static, ()>)> {
+  let stop = Arc::new(Mutex::new(false));
+
   let (sender, receiver) = channel();
 
   let datalink = cap.get_datalink();
@@ -153,17 +160,26 @@ fn start_capture<T: ::pcap::Activated + Send + 'static>(
     }
   };
 
-  let _sniff_thread = {
+  let sniff_thread = {
+    let stop = stop.clone();
     std::thread::spawn(move || {
       loop {
+        if *stop.lock().unwrap() {
+          println!("stop");
+          break;
+        }
         match cap.next() {
           Err(err) => match err {
             PcapError::NoMorePackets => break,
+            PcapError::TimeoutExpired => {
+              panic!("test if this is ever called");
+            }
             _ => {
               panic!("{}", err);
             }
           },
           Ok(packet) => {
+            // TODO move out of sniff thread
             let data = if is_radiotap {
               strip_radiotap(packet.data)
             } else {
@@ -178,11 +194,23 @@ fn start_capture<T: ::pcap::Activated + Send + 'static>(
               .unwrap();
           }
         }
+
+        // let stats = cap.stats();
+        // println!("{:#?}", stats);
       }
 
       sender.send(Status::Finished).unwrap();
     })
   };
 
-  Ok(receiver)
+  let stop_thread = BoxFnOnce::from(move || {
+    println!("stop called");
+    {
+      let mut stop = stop.lock().unwrap();
+      *stop = true;
+    }
+    sniff_thread.join().unwrap();
+  });
+
+  Ok((receiver, stop_thread))
 }

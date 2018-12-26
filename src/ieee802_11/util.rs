@@ -1,7 +1,7 @@
 use serde::ser::*;
 use std::mem::transmute;
 
-#[derive(Debug, Copy, Clone, Eq, PartialEq, PartialOrd, Hash)]
+#[derive(Copy, Clone, Eq, PartialEq, PartialOrd, Hash)]
 pub struct MacAddress([u8; 6]);
 
 impl MacAddress {
@@ -16,6 +16,13 @@ impl std::fmt::Display for MacAddress {
       "{:0>2X}:{:0>2X}:{:0>2X}:{:0>2X}:{:0>2X}:{:0>2X}",
       self.0[0], self.0[1], self.0[2], self.0[3], self.0[4], self.0[5],
     ))?;
+    Ok(())
+  }
+}
+
+impl std::fmt::Debug for MacAddress {
+  fn fmt(&self, formatter: &mut std::fmt::Formatter) -> std::result::Result<(), std::fmt::Error> {
+    formatter.write_fmt(format_args!("\"{}\"", self))?;
     Ok(())
   }
 }
@@ -60,7 +67,6 @@ pub fn hash_macs(mac1: MacAddress, mac2: MacAddress) -> String {
 }
 
 pub fn is_broadcast(mac: MacAddress) -> bool {
-  let mac = mac.to_string();
-  mac == "FF:FF:FF:FF:FF:FF" || mac.starts_with("01:00:5E")
+  (mac.0[0] & 0b01) != 0
   // multicast
 }

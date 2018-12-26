@@ -120,7 +120,7 @@ impl DataSubtype {
       // 13 Reserved
       14 => DataSubtype::QoSCFPoll,
       15 => DataSubtype::QoSCFAck,
-      _ => bail!("invalid Data Subtype"),
+      _ => bail!("invalid Data Subtype {}", n),
     })
   }
 }

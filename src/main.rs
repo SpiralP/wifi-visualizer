@@ -6,7 +6,9 @@ mod pcap;
 use self::events::*;
 use self::ieee802_11::*;
 use self::pcap::{start_file_capture, start_live_capture, PacketWithHeader, Status};
-use ws::listen;
+use boxfnonce::BoxFnOnce;
+use std::sync::mpsc::Receiver;
+use ws::{listen, CloseCode, Handler, Message, Result, Sender};
 
 const DATA_FROM_DS: [u8; 193] = [
   0x08, 0x02, 0x00, 0x00, 0x01, 0x00, 0x5e, 0x7f, 0xff, 0xfa, 0xe8, 0xed, 0xf3, 0x10, 0xa8, 0x10,
@@ -60,133 +62,108 @@ const BEACON: [u8; 237] = [
   0x1c, 0xf8, 0xc0, 0x9b, 0x07, 0x7f, 0xc3, 0x1b, 0xc7, 0x21, 0x64, 0x4e, 0xdb,
 ];
 
-fn main() {
-  listen("127.0.0.1:3012", |out| {
-    // new connection
+// Server WebSocket handler
+struct Server {
+  out: Sender,
+  stop_sniff: Option<BoxFnOnce<'static, ()>>,
+}
 
-    move |msg: ws::Message| {
-      // incoming message
-      println!("incoming message {:#?}", msg);
+impl Handler for Server {
+  fn on_message(&mut self, msg: Message) -> Result<()> {
+    // incoming message
+    println!("incoming message {:?}", msg);
 
+    let (receiver, stop_sniff): (Receiver<Status<PacketWithHeader>>, BoxFnOnce<'static, ()>) =
       match msg.into_text().unwrap().as_str() {
         "test" => {
-          for frame in &[&BEACON[..], &PROBE_RESPONSE_RETRY[..], &DATA_FROM_DS[..]] {
-            let parsed = Frame::parse(frame).unwrap();
-            println!("{:#?}", parsed);
+          let (sender, receiver) = std::sync::mpsc::channel();
+          for data in &[&BEACON[..], &PROBE_RESPONSE_RETRY[..], &DATA_FROM_DS[..]] {
+            sender
+              .send(Status::Active(PacketWithHeader {
+                header: unsafe { std::mem::zeroed() },
+                data: data.to_vec(),
+              }))
+              .unwrap();
+          }
+          sender.send(Status::Finished).unwrap();
 
-            let json = serde_json::to_string(&parsed).unwrap();
-            println!("{:#?}", &json);
-            out.send(json).unwrap();
+          (receiver, BoxFnOnce::from(|| {}))
+        }
+        "file" => start_file_capture(r"./bap.cap").unwrap(),
+        "live" => start_live_capture(std::env::args().nth(1)).unwrap(),
+        _ => {
+          return self.out.close(ws::CloseCode::Normal);
+        }
+      };
+
+    self.stop_sniff = Some(stop_sniff);
+
+    {
+      let out = self.out.clone();
+      std::thread::spawn(move || {
+        // let mut last_time = 0;
+        let mut store = {
+          let out = out.clone();
+          Store::new(Box::new(move |event| {
+            println!("{:?}", event);
+            out.send(serde_json::to_string(&event).unwrap()).unwrap();
+          }))
+        };
+
+        loop {
+          let status = receiver.recv().unwrap();
+          match status {
+            Status::Active(packet) => {
+              // println!("{:#?}", packet.header);
+
+              // let current_time = (packet.header.ts.tv_sec as u64) * 100_0000u64
+              //   + (packet.header.ts.tv_usec as u64);
+              // if last_time != 0 {
+              //   let diff = current_time.checked_sub(last_time).unwrap_or(0);
+              //   std::thread::sleep(std::time::Duration::from_micros(diff));
+              // }
+              // last_time = current_time;
+
+              let parsed_frame = Frame::parse(&packet.data).unwrap();
+              // println!("{:#?}", parsed_frame);
+
+              handle_frame(parsed_frame, &mut store);
+            }
+            Status::Finished => {
+              break;
+            }
           }
         }
-        "file" => {
-          let receiver = start_file_capture(r"./bap.cap").unwrap();
 
-          let _work_thread = {
-            let out = out.clone();
-            std::thread::spawn(move || {
-              // let mut last_time = 0;
-              let mut store = {
-                let out = out.clone();
-                Store::new(Box::new(move |event| {
-                  //
-                  println!("{:#?}", event);
-                  out.send(serde_json::to_string(&event).unwrap()).unwrap();
-                }))
-              };
-
-              loop {
-                let status = receiver.recv().unwrap();
-                match status {
-                  Status::Active(packet) => {
-                    // println!("{:#?}", packet.header);
-
-                    // let current_time = (packet.header.ts.tv_sec as u64) * 100_0000u64
-                    //   + (packet.header.ts.tv_usec as u64);
-                    // if last_time != 0 {
-                    //   let diff = current_time.checked_sub(last_time).unwrap_or(0);
-                    //   std::thread::sleep(std::time::Duration::from_micros(diff));
-                    // }
-                    // last_time = current_time;
-
-                    let parsed_frame = Frame::parse(&packet.data).unwrap();
-
-                    handle_frame(parsed_frame, &mut store);
-                  }
-                  Status::Finished => {
-                    break;
-                  }
-                }
-              }
-              println!("close");
-              out.close(ws::CloseCode::Normal).unwrap();
-            })
-          };
-
-          // sniff_thread.join().unwrap();
-          // work_thread.join().unwrap();
-
-          return Ok(()); // don't close yet
-        }
-
-        "live" => {
-          let receiver = start_live_capture(std::env::args().nth(1)).unwrap();
-
-          let _work_thread = {
-            let out = out.clone();
-            std::thread::spawn(move || {
-              // let mut last_time = 0;
-              loop {
-                let status: Status<PacketWithHeader> = receiver.recv().unwrap();
-                match status {
-                  Status::Active(packet) => {
-                    // println!("{:#?}", packet.header);
-
-                    // let current_time = (packet.header.ts.tv_sec as u64) * 100_0000u64
-                    //   + (packet.header.ts.tv_usec as u64);
-                    // if last_time != 0 {
-                    //   let diff = current_time.checked_sub(last_time).unwrap_or(0);
-                    //   std::thread::sleep(std::time::Duration::from_micros(diff));
-                    // }
-                    // last_time = current_time;
-
-                    let parsed_frame = Frame::parse(&packet.data).unwrap();
-
-                    if let Frame::Basic(ref frame) = parsed_frame {
-                      if let FrameType::Control(ref _subtype) = frame.type_ {
-                        continue;
-                      }
-                    }
-
-                    out
-                      .send(serde_json::to_string(&parsed_frame).unwrap())
-                      .unwrap();
-                  }
-                  Status::Finished => {
-                    break;
-                  }
-                }
-              }
-              println!("close");
-              out.close(ws::CloseCode::Normal).unwrap();
-            })
-          };
-
-          return Ok(()); // don't close yet
-        }
-        _ => {}
-      }
-
-      println!("close");
-      out.close(ws::CloseCode::Normal)
+        println!("close");
+        out.close(ws::CloseCode::Normal).unwrap();
+      });
     }
+
+    Ok(()) // don't close yet
+  }
+
+  fn on_close(&mut self, code: CloseCode, reason: &str) {
+    println!("WebSocket closing for ({:?}) {}", code, reason);
+    println!("Shutting down server after first connection closes.");
+    if let Some(stop_sniff) = self.stop_sniff.take() {
+      stop_sniff.call();
+    }
+    self.out.shutdown().unwrap();
+  }
+}
+
+fn main() {
+  listen("127.0.0.1:3012", |out| Server {
+    out,
+    stop_sniff: None,
   })
   .unwrap();
 }
 
 #[test]
 fn test_live_frame_parse() {
-  let receiver = start_live_capture(None).unwrap();
+  let (receiver, _stop_sniff) = start_live_capture(None).unwrap();
   let status = receiver.recv().unwrap();
   if let Status::Active(packet) = status {
     let parsed_frame = Frame::parse(&packet.data).unwrap();

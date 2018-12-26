@@ -1,3 +1,4 @@
+use crate::ieee802_11::frame_control::*;
 use crate::ieee802_11::util::*;
 use crate::ieee802_11::*;
 use serde_derive::*;
@@ -8,9 +9,16 @@ use std::collections::HashSet;
 #[serde(tag = "type", content = "data")] // {type: "NewAddress", data: "aa:aa:aa"}
 pub enum Event {
   NewAddress(MacAddress),
+
   Connection(MacAddress, MacAddress),
-  Leave(MacAddress, MacAddress), // x leaves y
   SetKind(MacAddress, Kind),
+
+  ProbeRequest(MacAddress, String),
+  ProbeResponse(),
+
+  // x joins y
+  Join(MacAddress, MacAddress),
+  Leave(MacAddress, MacAddress),
 }
 
 #[derive(Serialize, Debug, PartialEq, Copy, Clone)]
@@ -54,6 +62,9 @@ impl Store {
       return;
     }
 
+    self.add_address(mac1);
+    self.add_address(mac2);
+
     self.connections.insert(hash);
     (self.event_handler)(Event::Connection(mac1, mac2));
   }
@@ -64,6 +75,8 @@ impl Store {
         return;
       }
     }
+
+    self.add_address(mac);
 
     self.kinds.insert(mac, kind);
     (self.event_handler)(Event::SetKind(mac, kind));
@@ -76,41 +89,56 @@ pub fn handle_frame(frame: Frame, store: &mut Store) {
     Frame::Beacon(ref frame) => &frame.basic_frame,
   };
 
-  // if let Frame::Basic(ref frame) = parsed_frame {
-  //   if let FrameType::Control(ref _subtype) = frame.type_ {
-  //     continue;
-  //   }
-  // }
-
-  if let Some(transmitter_address) = basic_frame.transmitter_address {
-    store.add_address(transmitter_address);
-  }
-
-  if let Some(receiver_address) = basic_frame.receiver_address {
-    // if intended for broadcast TODO
-    if is_broadcast(receiver_address) {
-      return;
-    }
-
-    store.add_address(receiver_address);
-  }
-
   match basic_frame.type_ {
     FrameType::Data(ref subtype) => {
       // most likely a connection
-      store.add_connection(
-        basic_frame.transmitter_address.unwrap(),
-        basic_frame.receiver_address.unwrap(),
-      );
+
+      match subtype {
+        DataSubtype::Data | DataSubtype::QoSData => {
+          let transmitter_address = basic_frame.transmitter_address.expect("no trans on Data");
+          let receiver_address = basic_frame.receiver_address.expect("no recv on Data");
+
+          if is_broadcast(receiver_address) {
+            return;
+          }
+
+          store.add_connection(transmitter_address, receiver_address);
+          // if let Some(bssid) = basic_frame.bssid {
+          //   if transmitter_address == bssid {
+          //     // we are an AP
+          //     store.set_kind(transmitter_address, Kind::AccessPoint);
+          //   } else if receiver_address == bssid {
+          //     // we are a station
+          //     store.set_kind(receiver_address, Kind::Station);
+          //   }
+          // }
+        }
+
+        _ => {
+          // other DataSubtype
+        }
+      }
     }
 
-    FrameType::Management(ref subtype) => match subtype {
-      ManagementSubtype::Beacon => {
-        store.set_kind(basic_frame.transmitter_address.unwrap(), Kind::AccessPoint);
+    FrameType::Management(ref subtype) => {
+      //
+      match subtype {
+        ManagementSubtype::Beacon => {
+          store.set_kind(
+            basic_frame
+              .transmitter_address
+              .expect("no transmitter_address on Beacon"),
+            Kind::AccessPoint,
+          );
+        }
+        _ => {
+          // other ManagementSubtype
+        }
       }
-      _ => {}
-    },
+    }
 
-    _ => {}
+    _ => {
+      // other FrameType
+    }
   }
 }

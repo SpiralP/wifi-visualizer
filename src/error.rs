@@ -1,3 +1,5 @@
+#![allow(deprecated)]
+
 pub use error_chain::*;
 
 error_chain! {
