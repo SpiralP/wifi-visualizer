@@ -204,7 +204,6 @@ fn start_capture<T: ::pcap::Activated + Send + 'static>(
   };
 
   let stop_thread = BoxFnOnce::from(move || {
-    println!("stop called");
     {
       let mut stop = stop.lock().unwrap();
       *stop = true;

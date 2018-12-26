@@ -136,7 +136,9 @@ impl Handler for Server {
         }
 
         println!("close");
-        out.close(ws::CloseCode::Normal).unwrap();
+        if let Err(err) = out.close(ws::CloseCode::Normal) {
+          println!("error closing: {}", err);
+        }
       });
     }
 
@@ -154,11 +156,14 @@ impl Handler for Server {
 }
 
 fn main() {
-  listen("127.0.0.1:3012", |out| Server {
-    out,
-    stop_sniff: None,
-  })
-  .unwrap();
+  loop {
+    println!("websocket starting");
+    listen("127.0.0.1:3012", |out| Server {
+      out,
+      stop_sniff: None,
+    })
+    .unwrap();
+  }
 }
 
 #[test]
