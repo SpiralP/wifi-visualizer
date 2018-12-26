@@ -21,10 +21,25 @@ pub enum Event {
   Leave(MacAddress, MacAddress),
 }
 
-#[derive(Serialize, Debug, PartialEq, Copy, Clone)]
+#[derive(Serialize, Debug, Clone)]
+#[serde(tag = "type", content = "data")]
 pub enum Kind {
-  AccessPoint,
+  AccessPoint(Vec<u8>), // { type: "SetKind", data: { type: "AccessPoint", data: [0] } }
   Station,
+}
+impl Kind {
+  fn is_access_point(&self) -> bool {
+    match self {
+      Kind::AccessPoint(_) => true,
+      _ => false,
+    }
+  }
+  fn is_station(&self) -> bool {
+    match self {
+      Kind::Station => true,
+      _ => false,
+    }
+  }
 }
 
 pub struct Store {
@@ -71,14 +86,18 @@ impl Store {
 
   fn set_kind(&mut self, mac: MacAddress, kind: Kind) {
     if let Some(old_kind) = self.kinds.get(&mac) {
-      if *old_kind == kind {
+      if old_kind.is_access_point() && kind.is_access_point() {
+        return;
+      }
+      if old_kind.is_station() && kind.is_station() {
         return;
       }
     }
 
     self.add_address(mac);
 
-    self.kinds.insert(mac, kind);
+    // TODO stop cloning!
+    self.kinds.insert(mac, kind.clone());
     (self.event_handler)(Event::SetKind(mac, kind));
   }
 }
@@ -122,25 +141,21 @@ pub fn handle_frame(frame: Frame, store: &mut Store) {
       }
     }
 
-    FrameType::Management(ref subtype) => {
-      //
-      match subtype {
-        ManagementSubtype::Beacon => {
-          store.set_kind(
-            basic_frame
-              .transmitter_address
-              .expect("no transmitter_address on Beacon"),
-            Kind::AccessPoint,
-          );
-        }
-        _ => {
-          // other ManagementSubtype
-        }
-      }
-    }
-
     _ => {
       // other FrameType
     }
+  }
+
+  match frame {
+    Frame::Beacon(ref beacon_frame) => {
+      store.set_kind(
+        basic_frame
+          .transmitter_address
+          .expect("no transmitter_address on Beacon"),
+        Kind::AccessPoint(beacon_frame.ssid.clone()),
+      );
+    }
+
+    _ => {}
   }
 }

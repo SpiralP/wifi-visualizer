@@ -1,6 +1,13 @@
 declare type MacAddress = string;
 
-declare type FrameKind = "AccessPoint" | "Station";
+declare interface AccessPointFrameKind {
+  type: "AccessPoint";
+  data: number[];
+}
+declare interface StationFrameKind {
+  type: "Station";
+}
+declare type FrameKind = AccessPointFrameKind | StationFrameKind;
 
 declare interface NewAddressFrameEvent {
   type: "NewAddress";

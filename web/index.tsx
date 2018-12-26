@@ -4,6 +4,7 @@ import vis from "vis";
 const oui: (mac: string) => string | null = require("oui");
 const copy = require("clipboard-copy");
 import { hashMacs, isBroadcast, setNamedTimeout } from "./helpers";
+const jsesc = require("jsesc");
 
 const iconNameToCode = {
   broadcast_tower: "\uf519",
@@ -111,6 +112,15 @@ network.on("click", (event: { nodes: Array<string>; edges: Array<string> }) => {
 // @ts-ignore
 window.network = network;
 
+function htmlEscape(input: string): string {
+  // TODO
+  return input;
+}
+
+function byteArrayToString(input: number[]): string {
+  return jsesc(Buffer.from(input).toString());
+}
+
 function handleFrameEvent(event: FrameEvent) {
   if (event.type === "NewAddress") {
     const id = event.data;
@@ -120,7 +130,7 @@ function handleFrameEvent(event: FrameEvent) {
       id,
       icon: { code: companyToIconCode(company) },
       hover: true,
-      title: `${company}<br />${id}`,
+      title: company ? `${htmlEscape(company)}<br />${id}` : id,
     });
   } else if (event.type === "Connection") {
     const from = event.data[0];
@@ -135,13 +145,12 @@ function handleFrameEvent(event: FrameEvent) {
     const id = event.data[0];
     const kind = event.data[1];
 
-    switch (kind) {
-      case "AccessPoint": {
-        nodes.update({ id, icon: { color: "red" } });
-      }
-      case "Station": {
-        nodes.update({ id, icon: { color: "green" } });
-      }
+    if (kind.type === "AccessPoint") {
+      const label = byteArrayToString(kind.data);
+
+      nodes.update({ id, icon: { color: "green" }, label });
+    } else if (kind.type === "Station") {
+      // nodes.update({ id, icon: { color: "blue" } });
     }
   }
 }
