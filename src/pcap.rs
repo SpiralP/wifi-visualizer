@@ -84,9 +84,12 @@ pub fn start_file_capture(
 }
 
 fn strip_radiotap(bytes: &[u8]) -> Vec<u8> {
-  let header_length = bytes2_to_u16(&bytes[2..4]);
+  let mut bytes = bytes.iter();
+  bytes.next().unwrap();
+  bytes.next().unwrap();
+  let header_length = bytes2_to_u16(&mut bytes);
 
-  let mut vec: Vec<u8> = bytes.iter().skip(header_length as usize).cloned().collect();
+  let mut vec: Vec<u8> = bytes.skip(header_length as usize).cloned().collect();
 
   // if FCS, remove 4 bytes from end
 
@@ -165,7 +168,6 @@ fn start_capture<T: ::pcap::Activated + Send + 'static>(
     std::thread::spawn(move || {
       loop {
         if *stop.lock().unwrap() {
-          println!("stop");
           break;
         }
         match cap.next() {
@@ -198,6 +200,8 @@ fn start_capture<T: ::pcap::Activated + Send + 'static>(
         // let stats = cap.stats();
         // println!("{:#?}", stats);
       }
+
+      println!("sniff loop done");
 
       sender.send(Status::Finished).unwrap();
     })

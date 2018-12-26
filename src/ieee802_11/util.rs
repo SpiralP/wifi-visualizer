@@ -1,12 +1,20 @@
 use serde::ser::*;
 use std::mem::transmute;
+use std::slice::Iter;
 
 #[derive(Copy, Clone, Eq, PartialEq, PartialOrd, Hash)]
 pub struct MacAddress([u8; 6]);
 
 impl MacAddress {
-  pub fn from(bytes: &[u8]) -> MacAddress {
-    MacAddress([bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5]])
+  pub fn from(bytes: &mut Iter<u8>) -> MacAddress {
+    MacAddress([
+      *bytes.next().unwrap(),
+      *bytes.next().unwrap(),
+      *bytes.next().unwrap(),
+      *bytes.next().unwrap(),
+      *bytes.next().unwrap(),
+      *bytes.next().unwrap(),
+    ])
   }
 }
 
@@ -37,24 +45,38 @@ impl Serialize for MacAddress {
 }
 
 #[inline]
-pub fn bytes8_to_u64(bytes: &[u8]) -> u64 {
+pub fn bytes8_to_u64(bytes: &mut Iter<u8>) -> u64 {
   let n: u64 = unsafe {
     transmute([
-      bytes[0], bytes[1], bytes[2], bytes[3], bytes[4], bytes[5], bytes[6], bytes[7],
+      *bytes.next().unwrap(),
+      *bytes.next().unwrap(),
+      *bytes.next().unwrap(),
+      *bytes.next().unwrap(),
+      *bytes.next().unwrap(),
+      *bytes.next().unwrap(),
+      *bytes.next().unwrap(),
+      *bytes.next().unwrap(),
     ])
   };
   n.to_le()
 }
 
 #[inline]
-pub fn bytes4_to_u32(bytes: &[u8]) -> u32 {
-  let n: u32 = unsafe { transmute([bytes[0], bytes[1], bytes[2], bytes[3]]) };
+pub fn bytes4_to_u32(bytes: &mut Iter<u8>) -> u32 {
+  let n: u32 = unsafe {
+    transmute([
+      *bytes.next().unwrap(),
+      *bytes.next().unwrap(),
+      *bytes.next().unwrap(),
+      *bytes.next().unwrap(),
+    ])
+  };
   n.to_le()
 }
 
 #[inline]
-pub fn bytes2_to_u16(bytes: &[u8]) -> u16 {
-  let n: u16 = unsafe { transmute([bytes[0], bytes[1]]) };
+pub fn bytes2_to_u16(bytes: &mut Iter<u8>) -> u16 {
+  let n: u16 = unsafe { transmute([*bytes.next().unwrap(), *bytes.next().unwrap()]) };
   n.to_le()
 }
 

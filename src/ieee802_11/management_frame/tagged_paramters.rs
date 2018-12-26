@@ -1,23 +1,22 @@
 use crate::error::*;
-use serde_derive::*;
+use std::slice::Iter;
 
-#[derive(Serialize, Debug)]
+#[derive(Debug)]
 pub struct Tag {
   pub number: u8,
   pub length: u8,
   pub data: Vec<u8>,
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Debug)]
 pub struct TaggedParameters {
   pub tags: Vec<Tag>,
 }
 
 impl TaggedParameters {
-  pub fn parse(bytes: &[u8]) -> Result<TaggedParameters> {
+  pub fn parse(bytes: &mut Iter<u8>) -> Result<TaggedParameters> {
     let mut tags = Vec::new();
 
-    let mut bytes = bytes.iter();
     loop {
       let number = {
         let maybe_number = bytes.next();

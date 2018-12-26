@@ -1,15 +1,13 @@
 use crate::error::*;
-use serde_derive::*;
 
-#[derive(Serialize, Debug)]
-#[serde(tag = "type", content = "subtype")]
+#[derive(Debug)]
 pub enum FrameType {
   Management(ManagementSubtype),
   Control(ControlSubtype),
   Data(DataSubtype),
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum ManagementSubtype {
   AssociationRequest,
   AssociationResponse,
@@ -28,8 +26,8 @@ pub enum ManagementSubtype {
 }
 
 impl ManagementSubtype {
-  pub fn parse(n: u8) -> Result<ManagementSubtype> {
-    Ok(match n {
+  pub fn parse(byte: u8) -> Result<ManagementSubtype> {
+    Ok(match byte {
       // maybe use an array lookup? or transmute?
       0 => ManagementSubtype::AssociationRequest,
       1 => ManagementSubtype::AssociationResponse,
@@ -45,12 +43,12 @@ impl ManagementSubtype {
       12 => ManagementSubtype::Deauthentication,
       13 => ManagementSubtype::Action,
       // 14-15 Reserved
-      _ => bail!("invalid Management Subtype"),
+      _ => bail!("invalid Management Subtype {}", byte),
     })
   }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum ControlSubtype {
   // 0-7 Reserved
   BlockAckRequest = 8,
@@ -64,8 +62,8 @@ pub enum ControlSubtype {
 }
 
 impl ControlSubtype {
-  pub fn parse(n: u8) -> Result<ControlSubtype> {
-    Ok(match n {
+  pub fn parse(byte: u8) -> Result<ControlSubtype> {
+    Ok(match byte {
       // 0-7 Reserved
       8 => ControlSubtype::BlockAckRequest,
       9 => ControlSubtype::BlockAck,
@@ -75,12 +73,12 @@ impl ControlSubtype {
       13 => ControlSubtype::ACK,
       14 => ControlSubtype::CFEnd,
       15 => ControlSubtype::CFEndCFACK,
-      _ => bail!("invalid Control Subtype"),
+      _ => bail!("invalid Control Subtype {}", byte),
     })
   }
 }
 
-#[derive(Serialize, Debug)]
+#[derive(Debug, Copy, Clone)]
 pub enum DataSubtype {
   Data,
   DataCFAck,
@@ -101,8 +99,8 @@ pub enum DataSubtype {
 }
 
 impl DataSubtype {
-  pub fn parse(n: u8) -> Result<DataSubtype> {
-    Ok(match n {
+  pub fn parse(byte: u8) -> Result<DataSubtype> {
+    Ok(match byte {
       // maybe use an array lookup? or transmute?
       0 => DataSubtype::Data,
       1 => DataSubtype::DataCFAck,
@@ -120,7 +118,7 @@ impl DataSubtype {
       // 13 Reserved
       14 => DataSubtype::QoSCFPoll,
       15 => DataSubtype::QoSCFAck,
-      _ => bail!("invalid Data Subtype {}", n),
+      _ => bail!("invalid Data Subtype {}", byte),
     })
   }
 }

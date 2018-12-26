@@ -146,18 +146,13 @@ function handleFrameEvent(event: FrameEvent) {
   }
 }
 
-let frames = 0;
-
 connect(
-  "live",
+  "file",
   (data) => {
     console.log(data);
 
-    frames += 1;
     handleFrameEvent(data);
   }
 )
-  .then(() => {
-    console.log(`${frames} frames`);
-  })
+  .then(() => {})
   .catch((e) => console.error(e));

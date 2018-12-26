@@ -86,7 +86,9 @@ impl Store {
 pub fn handle_frame(frame: Frame, store: &mut Store) {
   let basic_frame = match frame {
     Frame::Basic(ref frame) => &frame,
-    Frame::Beacon(ref frame) => &frame.basic_frame,
+    Frame::Beacon(ref frame) => &frame.management_frame.basic_frame,
+    Frame::ProbeRequest(ref frame) => &frame.management_frame.basic_frame,
+    Frame::Management(ref frame) => &frame.basic_frame,
   };
 
   match basic_frame.type_ {

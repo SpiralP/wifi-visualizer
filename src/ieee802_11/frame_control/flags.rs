@@ -1,7 +1,7 @@
 use crate::error::*;
-use serde_derive::*;
+use std::slice::Iter;
 
-#[derive(Serialize, Debug)]
+#[derive(Debug)]
 pub struct Flags {
   pub to_ds: bool,
   pub from_ds: bool,
@@ -14,7 +14,9 @@ pub struct Flags {
 }
 
 impl Flags {
-  pub fn parse(byte: u8) -> Result<Flags> {
+  pub fn parse(bytes: &mut Iter<u8>) -> Result<Flags> {
+    let byte = bytes.next().unwrap();
+
     let to_ds = byte & 0b0000_0001 != 0; // to Distribution System
     let from_ds = byte & 0b0000_0010 != 0; // from Distribution System
 

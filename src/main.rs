@@ -124,7 +124,8 @@ impl Handler for Server {
               // }
               // last_time = current_time;
 
-              let parsed_frame = Frame::parse(&packet.data).unwrap();
+              let mut iter = packet.data.iter();
+              let parsed_frame = Frame::parse(&mut iter).unwrap();
               // println!("{:#?}", parsed_frame);
 
               handle_frame(parsed_frame, &mut store);
@@ -135,34 +136,30 @@ impl Handler for Server {
           }
         }
 
-        println!("close");
-        if let Err(err) = out.close(ws::CloseCode::Normal) {
-          println!("error closing: {}", err);
-        }
+        println!("work loop done");
+        // if let Err(err) = out.close(ws::CloseCode::Normal) {
+        //   println!("error closing: {}", err);
+        // }
       });
     }
 
     Ok(()) // don't close yet
   }
 
-  fn on_close(&mut self, code: CloseCode, reason: &str) {
-    println!("WebSocket closing for ({:?}) {}", code, reason);
-    println!("Shutting down server after first connection closes.");
+  fn on_close(&mut self, _code: CloseCode, _reason: &str) {
     if let Some(stop_sniff) = self.stop_sniff.take() {
       stop_sniff.call();
     }
-    self.out.shutdown().unwrap();
   }
 }
 
 fn main() {
-  loop {
-    println!("websocket starting");
-    listen("127.0.0.1:3012", |out| Server {
-      out,
-      stop_sniff: None,
-    })
-    .unwrap();
+  println!("websocket starting");
+  if let Err(err) = listen("127.0.0.1:3012", |out| Server {
+    out,
+    stop_sniff: None,
+  }) {
+    println!("listen error: {}", err);
   }
 }
 
@@ -171,7 +168,7 @@ fn test_live_frame_parse() {
   let (receiver, _stop_sniff) = start_live_capture(None).unwrap();
   let status = receiver.recv().unwrap();
   if let Status::Active(packet) = status {
-    let parsed_frame = Frame::parse(&packet.data).unwrap();
+    let parsed_frame = Frame::parse(&mut packet.data.iter()).unwrap();
     println!("{:#?}", parsed_frame);
   } else {
     panic!("not Status::Active");

@@ -1,7 +1,7 @@
 use crate::error::*;
-use serde_derive::*;
+use std::slice::Iter;
 
-#[derive(Serialize, Debug)]
+#[derive(Debug)]
 pub struct CapabilitiesInfo {
   // pub ESS_capabilities: bool,             // 1: Transmitter is an AP
 // pub IBSS_status: bool,                  // 0: Transmitter belongs to a BSS
@@ -20,8 +20,9 @@ pub struct CapabilitiesInfo {
 }
 
 impl CapabilitiesInfo {
-  pub fn parse(bytes: &[u8]) -> Result<CapabilitiesInfo> {
-    let _ = &bytes[0..2];
+  pub fn parse(bytes: &mut Iter<u8>) -> Result<CapabilitiesInfo> {
+    bytes.next().unwrap();
+    bytes.next().unwrap();
 
     Ok(CapabilitiesInfo {})
   }
