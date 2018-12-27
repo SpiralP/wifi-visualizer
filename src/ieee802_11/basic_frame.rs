@@ -49,6 +49,12 @@ impl BasicFrame {
             bssid = Some(addr2);
           }
 
+          ControlSubtype::PSPoll => {
+            let addr2 = MacAddress::from(bytes);
+            bssid = Some(addr2);
+            transmitter_address = Some(addr2);
+          }
+
           _ => {
             other = true;
           }

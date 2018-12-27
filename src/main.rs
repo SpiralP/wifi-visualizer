@@ -89,7 +89,7 @@ impl Handler for Server {
 
           (receiver, BoxFnOnce::from(|| {}))
         }
-        "file" => start_file_capture(r"./bap.cap").unwrap(),
+        "file" => start_file_capture(r"./all.cap").unwrap(),
         "live" => start_live_capture(std::env::args().nth(1)).unwrap(),
         _ => {
           return self.out.close(ws::CloseCode::Normal);

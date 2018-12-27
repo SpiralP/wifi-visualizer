@@ -1,19 +1,21 @@
 use super::*;
 
 #[derive(Debug)]
-pub struct ProbeRequestFrame {
+pub struct ProbeResponseFrame {
   pub management_frame: ManagementFrame,
 
+  pub fixed_parameters: FixedParameters,
   pub tagged_parameters: TaggedParameters,
 
   pub ssid: Vec<u8>,
 }
 
-impl ProbeRequestFrame {
+impl ProbeResponseFrame {
   pub fn parse(
     management_frame: ManagementFrame,
     bytes: &mut Cursor<Vec<u8>>,
-  ) -> Result<ProbeRequestFrame> {
+  ) -> Result<ProbeResponseFrame> {
+    let fixed_parameters = FixedParameters::parse(bytes)?;
     let tagged_parameters = TaggedParameters::parse(bytes)?;
 
     let mut ssid = Vec::new();
@@ -25,8 +27,9 @@ impl ProbeRequestFrame {
       }
     }
 
-    Ok(ProbeRequestFrame {
+    Ok(ProbeResponseFrame {
       management_frame,
+      fixed_parameters,
       tagged_parameters,
       ssid,
     })

@@ -9,16 +9,13 @@ use std::collections::HashSet;
 #[serde(tag = "type", content = "data")] // {type: "NewAddress", data: "aa:aa:aa"}
 pub enum Event {
   NewAddress(MacAddress),
-
-  Connection(MacAddress, MacAddress),
   SetKind(MacAddress, Kind),
 
-  ProbeRequest(MacAddress, String),
-  ProbeResponse(),
+  NewConnection(MacAddress, MacAddress),
+  RemoveConnection(MacAddress, MacAddress),
 
-  // x joins y
-  Join(MacAddress, MacAddress),
-  Leave(MacAddress, MacAddress),
+  ProbeRequest(MacAddress, Vec<u8>),              // from ssid
+  ProbeResponse(MacAddress, MacAddress, Vec<u8>), // from to ssid
 }
 
 #[derive(Serialize, Debug, Clone)]
@@ -62,6 +59,10 @@ impl Store {
   }
 
   fn add_address(&mut self, mac: MacAddress) {
+    if is_broadcast(mac) {
+      return;
+    }
+
     if self.addresses.contains(&mac) {
       return;
     }
@@ -70,21 +71,7 @@ impl Store {
     (self.event_handler)(Event::NewAddress(mac));
   }
 
-  fn add_connection(&mut self, mac1: MacAddress, mac2: MacAddress) {
-    let hash = hash_macs(mac1, mac2);
-
-    if self.connections.contains(&hash) {
-      return;
-    }
-
-    self.add_address(mac1);
-    self.add_address(mac2);
-
-    self.connections.insert(hash);
-    (self.event_handler)(Event::Connection(mac1, mac2));
-  }
-
-  fn set_kind(&mut self, mac: MacAddress, kind: Kind) {
+  fn change_kind(&mut self, mac: MacAddress, kind: Kind) {
     if let Some(old_kind) = self.kinds.get(&mac) {
       if old_kind.is_access_point() && kind.is_access_point() {
         return;
@@ -96,9 +83,43 @@ impl Store {
 
     self.add_address(mac);
 
-    // TODO stop cloning!
     self.kinds.insert(mac, kind.clone());
     (self.event_handler)(Event::SetKind(mac, kind));
+  }
+
+  fn add_connection(&mut self, mac1: MacAddress, mac2: MacAddress) {
+    if is_broadcast(mac1) {
+      return; // TODO
+    } // TODO
+    if is_broadcast(mac2) {
+      return;
+    }
+
+    let hash = hash_macs(mac1, mac2);
+
+    if self.connections.contains(&hash) {
+      return;
+    }
+
+    self.add_address(mac1);
+    self.add_address(mac2);
+
+    self.connections.insert(hash);
+    (self.event_handler)(Event::NewConnection(mac1, mac2));
+  }
+
+  fn remove_connection(&mut self, mac1: MacAddress, mac2: MacAddress) {
+    let hash = hash_macs(mac1, mac2);
+
+    if !self.connections.contains(&hash) {
+      return;
+    }
+
+    self.add_address(mac1);
+    self.add_address(mac2);
+
+    self.connections.remove(&hash);
+    (self.event_handler)(Event::RemoveConnection(mac1, mac2));
   }
 }
 
@@ -107,52 +128,113 @@ pub fn handle_frame(frame: Frame, store: &mut Store) {
     Frame::Basic(ref frame) => &frame,
     Frame::Beacon(ref frame) => &frame.management_frame.basic_frame,
     Frame::ProbeRequest(ref frame) => &frame.management_frame.basic_frame,
+    Frame::ProbeResponse(ref frame) => &frame.management_frame.basic_frame,
     Frame::Management(ref frame) => &frame.basic_frame,
   };
 
-  match basic_frame.type_ {
-    FrameType::Data(ref subtype) => {
-      // most likely a connection
+  if let Some(transmitter_address) = basic_frame.transmitter_address {
+    store.add_address(transmitter_address);
+  }
 
-      match subtype {
-        DataSubtype::Data | DataSubtype::QoSData => {
-          let transmitter_address = basic_frame.transmitter_address.expect("no trans on Data");
-          let receiver_address = basic_frame.receiver_address.expect("no recv on Data");
+  if let Some(receiver_address) = basic_frame.receiver_address {
+    store.add_address(receiver_address);
 
-          if is_broadcast(receiver_address) {
-            return;
-          }
-
-          store.add_connection(transmitter_address, receiver_address);
-          // if let Some(bssid) = basic_frame.bssid {
-          //   if transmitter_address == bssid {
-          //     // we are an AP
-          //     store.set_kind(transmitter_address, Kind::AccessPoint);
-          //   } else if receiver_address == bssid {
-          //     // we are a station
-          //     store.set_kind(receiver_address, Kind::Station);
-          //   }
-          // }
-        }
-
-        _ => {
-          // other DataSubtype
-        }
-      }
+    if let Some(transmitter_address) = basic_frame.transmitter_address {
+      store.add_connection(transmitter_address, receiver_address);
     }
+  }
+
+  // events based on frame type
+  match basic_frame.type_ {
+    // FrameType::Data(ref subtype) => {
+    //   match subtype {
+    //     DataSubtype::Data | DataSubtype::QoSData => {
+    //       // most likely a connection
+
+    //       let transmitter_address = basic_frame.transmitter_address.expect("no trans on Data");
+    //       let receiver_address = basic_frame.receiver_address.expect("no recv on Data");
+
+    //       store.add_connection(transmitter_address, receiver_address);
+    //     }
+
+    //     _ => {
+    //       // other DataSubtype
+    //     }
+    //   }
+    // }
+    FrameType::Management(ref subtype) => match subtype {
+      //   ManagementSubtype::Authentication
+      //   | ManagementSubtype::AssociationRequest
+      //   | ManagementSubtype::AssociationResponse
+      //   | ManagementSubtype::ReassociationRequest
+      //   | ManagementSubtype::ReassociationResponse => {
+      //     // Authentication is 2 way
+      //     // _Request is from STA
+      //     // _Response is from AP
+
+      //     store.add_connection(
+      //       basic_frame
+      //         .transmitter_address
+      //         .expect("no ta on association"),
+      //       basic_frame.receiver_address.expect("no ra on association"),
+      //     );
+      //   }
+      ManagementSubtype::Disassociation | ManagementSubtype::Deauthentication => {
+        // TODO broadcast? is it sent from router?
+        // Disassociation is from STA
+        // Deauthentication is from AP
+
+        store.remove_connection(
+          basic_frame
+            .transmitter_address
+            .expect("no ta on disassociation"),
+          basic_frame
+            .receiver_address
+            .expect("no ra on disassociation"),
+        );
+      }
+
+      _ => {
+        // other ManagementSubtype
+      }
+    },
 
     _ => {
       // other FrameType
     }
   }
 
+  // frames with special info that's sent
   match frame {
     Frame::Beacon(ref beacon_frame) => {
-      store.set_kind(
+      store.change_kind(
         basic_frame
           .transmitter_address
           .expect("no transmitter_address on Beacon"),
         Kind::AccessPoint(beacon_frame.ssid.clone()),
+      );
+    }
+
+    Frame::ProbeRequest(ref probe_request_frame) => {
+      if !probe_request_frame.ssid.is_empty() {
+        let t = probe_request_frame
+          .management_frame
+          .basic_frame
+          .transmitter_address
+          .expect("no trans on ProbeRequest");
+
+        // (store.event_handler)(Event::ProbeRequest(t, probe_request_frame.ssid.clone()));
+      }
+    }
+
+    Frame::ProbeResponse(ref probe_response_frame) => {
+      store.change_kind(
+        probe_response_frame
+          .management_frame
+          .basic_frame
+          .transmitter_address
+          .expect("no trans on ProbeResponse"),
+        Kind::AccessPoint(probe_response_frame.ssid.clone()),
       );
     }
 

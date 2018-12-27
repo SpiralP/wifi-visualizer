@@ -1,8 +1,9 @@
 declare type MacAddress = string;
+declare type ByteArray = number[];
 
 declare interface AccessPointFrameKind {
   type: "AccessPoint";
-  data: number[];
+  data: ByteArray;
 }
 declare interface StationFrameKind {
   type: "Station";
@@ -13,21 +14,31 @@ declare interface NewAddressFrameEvent {
   type: "NewAddress";
   data: MacAddress;
 }
-declare interface ConnectionFrameEvent {
-  type: "Connection";
-  data: [MacAddress, MacAddress];
-}
-declare interface LeaveFrameEvent {
-  type: "Leave";
-  data: MacAddress;
-}
 declare interface SetKindFrameEvent {
   type: "SetKind";
   data: [MacAddress, FrameKind];
 }
+declare interface NewConnectionFrameEvent {
+  type: "NewConnection";
+  data: [MacAddress, MacAddress];
+}
+declare interface RemoveConnectionFrameEvent {
+  type: "RemoveConnection";
+  data: [MacAddress, MacAddress];
+}
+declare interface ProbeRequestFrameEvent {
+  type: "ProbeRequest";
+  data: [MacAddress, ByteArray];
+}
+declare interface ProbeResponseFrameEvent {
+  type: "ProbeResponse";
+  data: [MacAddress, MacAddress, ByteArray];
+}
 
 declare type FrameEvent =
   | NewAddressFrameEvent
-  | ConnectionFrameEvent
-  | LeaveFrameEvent
-  | SetKindFrameEvent;
+  | SetKindFrameEvent
+  | NewConnectionFrameEvent
+  | RemoveConnectionFrameEvent
+  | ProbeRequestFrameEvent
+  | ProbeResponseFrameEvent;

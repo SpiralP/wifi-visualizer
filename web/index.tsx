@@ -1,10 +1,10 @@
 // TODO import fontawesome for offline
 
-import vis from "vis";
-const oui: (mac: string) => string | null = require("oui");
-const copy = require("clipboard-copy");
 import { hashMacs, isBroadcast, setNamedTimeout } from "./helpers";
-const jsesc = require("jsesc");
+import copy from "clipboard-copy";
+const jsesc: (input: string) => string = require("jsesc");
+import oui from "./oui";
+import vis from "vis";
 
 const iconNameToCode = {
   broadcast_tower: "\uf519",
@@ -16,29 +16,46 @@ const iconNameToCode = {
   mobile: "\uf10b",
   tv: "\uf26c",
   steam: "\uf1b6",
+  google: "\uf1a0",
+  printer: "\uf02f",
+  microsoft: "\uf3ca",
+  video: "\uf03d",
 };
 
 // tslint:disable-next-line:object-literal-key-quotes
 const ouiToIconCode = {
-  "Cisco Systems Inc.": iconNameToCode.broadcast_tower,
-  "Belkin International Inc.": iconNameToCode.broadcast_tower,
-  "ASUSTek Computer Inc.": iconNameToCode.broadcast_tower,
-  "ARRIS Group, Inc.": iconNameToCode.broadcast_tower,
-  "TP-Link Technologies Co. Ltd": iconNameToCode.broadcast_tower,
+  Cisco: iconNameToCode.broadcast_tower,
+  Belkin: iconNameToCode.broadcast_tower,
+  ASUSTek: iconNameToCode.broadcast_tower,
+  ARRIS: iconNameToCode.broadcast_tower,
+  "Tp Link": iconNameToCode.broadcast_tower,
   "Texas Instruments": iconNameToCode.broadcast_tower,
   Netgear: iconNameToCode.broadcast_tower,
-  Broadcom: "broadcom",
-  "Intel Corporation": iconNameToCode.desktop,
-  "LG Electronics (Mobile Communications)": iconNameToCode.android,
+  Intel: iconNameToCode.desktop,
+  LG: iconNameToCode.android,
   Apple: iconNameToCode.apple,
-  "Murata Manufacturing Co. Ltd": iconNameToCode.mobile,
-  "Samsung Electro-Mechanics(Thailand)": iconNameToCode.mobile,
-  "Roku, Inc": iconNameToCode.tv,
-  "Valve Corporation": iconNameToCode.steam,
-  "Amazon Technologies Inc.": iconNameToCode.amazon,
+  Murata: iconNameToCode.mobile,
+  Samsung: iconNameToCode.android,
+  Valve: iconNameToCode.steam,
+  Amazon: iconNameToCode.amazon,
+  HTC: iconNameToCode.android,
+  Roku: iconNameToCode.tv,
+  "Hewlett Packard": iconNameToCode.printer,
+  "Cisco Linksys": iconNameToCode.broadcast_tower,
+  Google: iconNameToCode.google,
+  "Nest Labs": iconNameToCode.google,
+  "2Wire": iconNameToCode.broadcast_tower,
+  "Hon Hai": iconNameToCode.broadcast_tower,
+  Microsoft: iconNameToCode.microsoft,
+  Technicolor: iconNameToCode.broadcast_tower,
+  "Shenzhen Reecam": iconNameToCode.video,
+  "ABB/Tropos": iconNameToCode.broadcast_tower,
+  BLU: iconNameToCode.android,
+  zte: iconNameToCode.android,
+  "TCL Technoly": iconNameToCode.tv,
 };
 
-function companyToIconCode(company: string | null) {
+function companyToIconCode(company?: string) {
   if (company) {
     const iconCode = ouiToIconCode[company];
     if (iconCode) {
@@ -123,48 +140,56 @@ function htmlEscape(input: string): string {
   return input;
 }
 
-function byteArrayToString(input: number[]): string {
+function byteArrayToString(input: ByteArray): string {
   return jsesc(Buffer.from(input).toString());
 }
 
 function handleFrameEvent(event: FrameEvent) {
   if (event.type === "NewAddress") {
-    const id = event.data;
-    const company = oui(id);
+    const mac = event.data;
+    const company = oui(mac);
 
     nodes.add({
-      id,
+      id: mac,
       icon: { code: companyToIconCode(company) },
       hover: true,
-      title: company ? `${htmlEscape(company)}<br />${id}` : id,
+      title: company ? `${htmlEscape(company)}<br />${mac}` : mac,
     });
-  } else if (event.type === "Connection") {
-    const from = event.data[0];
-    const to = event.data[1];
+  } else if (event.type === "SetKind") {
+    const [id, kind] = event.data;
+
+    if (kind.type === "AccessPoint") {
+      const ssid = kind.data;
+      const label = byteArrayToString(ssid);
+
+      nodes.update({ id, icon: { color: "green" }, label });
+    } else if (kind.type === "Station") {
+      // nodes.update({ id, icon: { color: "blue" } });
+    }
+  } else if (event.type === "NewConnection") {
+    const [from, to] = event.data;
 
     edges.add({
       id: hashMacs(from, to),
       from,
       to,
     });
-  } else if (event.type === "SetKind") {
-    const id = event.data[0];
-    const kind = event.data[1];
-
-    if (kind.type === "AccessPoint") {
-      const label = byteArrayToString(kind.data);
-
-      nodes.update({ id, icon: { color: "green" }, label });
-    } else if (kind.type === "Station") {
-      // nodes.update({ id, icon: { color: "blue" } });
-    }
+  } else if (event.type === "RemoveConnection") {
+    const [from, to] = event.data;
+    edges.remove(hashMacs(from, to));
+  } else if (event.type === "ProbeRequest") {
+    const [from, ssid] = event.data;
+    // console.log(from, byteArrayToString(ssid));
+  } else if (event.type === "ProbeResponse") {
+    const [from, to, ssid] = event.data;
+    // console.log(from, byteArrayToString(ssid));
   }
 }
 
 connect(
   "file",
   (data) => {
-    console.log(data);
+    // console.log(data);
 
     handleFrameEvent(data);
   }
