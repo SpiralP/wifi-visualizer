@@ -1,5 +1,4 @@
-use crate::error::*;
-use std::slice::Iter;
+use super::*;
 
 #[derive(Debug)]
 pub struct Tag {
@@ -14,22 +13,21 @@ pub struct TaggedParameters {
 }
 
 impl TaggedParameters {
-  pub fn parse(bytes: &mut Iter<u8>) -> Result<TaggedParameters> {
+  pub fn parse(bytes: &mut Cursor<Vec<u8>>) -> Result<TaggedParameters> {
     let mut tags = Vec::new();
 
     loop {
       let number = {
-        let maybe_number = bytes.next();
-        if maybe_number.is_none() {
-          break;
+        match bytes.read_u8() {
+          Err(_) => break,
+          Ok(number) => number,
         }
-        *maybe_number.unwrap()
       };
-      let length = *bytes.next().unwrap();
+      let length = bytes.read_u8().unwrap();
 
       let mut data = Vec::new();
       for _ in 0..length {
-        data.push(*bytes.next().unwrap());
+        data.push(bytes.read_u8().unwrap());
       }
 
       tags.push(Tag {

@@ -5,15 +5,16 @@ pub mod management_frame;
 pub mod probe_request_frame;
 pub mod util;
 
-pub use self::basic_frame::BasicFrame;
-pub use self::beacon_frame::BeaconFrame;
-pub use self::frame_control::FrameControl;
-pub use self::frame_control::{ControlSubtype, FrameType, ManagementSubtype};
-pub use self::management_frame::{FixedParameters, ManagementFrame, TaggedParameters};
-pub use self::probe_request_frame::ProbeRequestFrame;
-pub use self::util::{bytes2_to_u16, MacAddress};
+pub use self::basic_frame::*;
+pub use self::beacon_frame::*;
+pub use self::frame_control::*;
+pub use self::frame_control::*;
+pub use self::management_frame::*;
+pub use self::probe_request_frame::*;
+pub use self::util::*;
 use crate::error::*;
-use std::slice::Iter;
+pub use byteorder::{ReadBytesExt, *};
+use std::io::Cursor;
 
 #[derive(Debug)]
 pub enum Frame {
@@ -24,7 +25,7 @@ pub enum Frame {
 }
 
 impl Frame {
-  pub fn parse(bytes: &mut Iter<u8>) -> Result<Frame> {
+  pub fn parse(bytes: &mut Cursor<Vec<u8>>) -> Result<Frame> {
     let basic_frame = BasicFrame::parse(bytes)?;
 
     match basic_frame.type_ {

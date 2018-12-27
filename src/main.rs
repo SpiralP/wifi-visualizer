@@ -1,6 +1,6 @@
 mod error;
-pub mod events;
-pub mod ieee802_11;
+mod events;
+mod ieee802_11;
 mod pcap;
 
 use self::events::*;
@@ -124,8 +124,8 @@ impl Handler for Server {
               // }
               // last_time = current_time;
 
-              let mut iter = packet.data.iter();
-              let parsed_frame = Frame::parse(&mut iter).unwrap();
+              let mut cursor = std::io::Cursor::new(packet.data);
+              let parsed_frame = Frame::parse(&mut cursor).unwrap();
               // println!("{:#?}", parsed_frame);
 
               handle_frame(parsed_frame, &mut store);
@@ -165,12 +165,12 @@ fn main() {
 
 #[test]
 fn test_live_frame_parse() {
-  let (receiver, _stop_sniff) = start_live_capture(None).unwrap();
-  let status = receiver.recv().unwrap();
-  if let Status::Active(packet) = status {
-    let parsed_frame = Frame::parse(&mut packet.data.iter()).unwrap();
-    println!("{:#?}", parsed_frame);
-  } else {
-    panic!("not Status::Active");
-  }
+  // let (receiver, _stop_sniff) = start_live_capture(None).unwrap();
+  // let status = receiver.recv().unwrap();
+  // if let Status::Active(packet) = status {
+  //   let parsed_frame = Frame::parse(&mut packet.data.iter()).unwrap();
+  //   println!("{:#?}", parsed_frame);
+  // } else {
+  //   panic!("not Status::Active");
+  // }
 }

@@ -1,8 +1,8 @@
 use crate::error::*;
-use crate::ieee802_11::util::*;
 use ::pcap::Error as PcapError;
 use ::pcap::*;
 use boxfnonce::BoxFnOnce;
+use radiotap::Radiotap;
 use std::sync::mpsc::*;
 use std::sync::*;
 
@@ -83,22 +83,19 @@ pub fn start_file_capture(
   Ok(start_capture(cap)?)
 }
 
-fn strip_radiotap(bytes: &[u8]) -> Vec<u8> {
-  let mut bytes = bytes.iter();
-  bytes.next().unwrap();
-  bytes.next().unwrap();
-  let header_length = bytes2_to_u16(&mut bytes);
+fn strip_radiotap(bytes: &[u8]) -> &[u8] {
+  let (radiotap, rest) = Radiotap::parse(bytes).unwrap();
+  // println!("{:#?}", element);
 
-  let mut vec: Vec<u8> = bytes.skip(header_length as usize).cloned().collect();
+  let has_fcs = radiotap.flags.map(|flags| flags.fcs).unwrap_or(false);
 
-  // if FCS, remove 4 bytes from end
-
-  vec.pop(); // TODO
-  vec.pop();
-  vec.pop();
-  vec.pop();
-
-  vec
+  if has_fcs {
+    // remove last 4 bytes
+    let (data, _fcs) = rest.split_at(rest.len() - 4);
+    data
+  } else {
+    rest
+  }
 }
 
 #[test]
@@ -171,7 +168,7 @@ fn start_capture<T: ::pcap::Activated + Send + 'static>(
           break;
         }
         match cap.next() {
-          Err(err) => match err {
+          Err(ref err) => match err {
             PcapError::NoMorePackets => break,
             PcapError::TimeoutExpired => {
               panic!("test if this is ever called");
@@ -180,18 +177,18 @@ fn start_capture<T: ::pcap::Activated + Send + 'static>(
               panic!("{}", err);
             }
           },
-          Ok(packet) => {
+          Ok(ref packet) => {
             // TODO move out of sniff thread
             let data = if is_radiotap {
               strip_radiotap(packet.data)
             } else {
-              packet.data.to_vec()
+              packet.data
             };
 
             sender
               .send(Status::Active(PacketWithHeader {
                 header: *packet.header,
-                data,
+                data: data.to_vec(),
               }))
               .unwrap();
           }

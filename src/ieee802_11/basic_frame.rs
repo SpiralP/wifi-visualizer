@@ -1,5 +1,4 @@
 use super::*;
-use std::slice::Iter;
 
 #[derive(Debug)]
 pub struct BasicFrame {
@@ -17,9 +16,9 @@ pub struct BasicFrame {
 }
 
 impl BasicFrame {
-  pub fn parse(bytes: &mut Iter<u8>) -> Result<BasicFrame> {
+  pub fn parse(bytes: &mut Cursor<Vec<u8>>) -> Result<BasicFrame> {
     let frame_control = FrameControl::parse(bytes)?;
-    let duration = bytes2_to_u16(bytes);
+    let duration = bytes.read_u16::<LE>().unwrap();
 
     let addr1 = MacAddress::from(bytes);
 

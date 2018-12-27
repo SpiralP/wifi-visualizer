@@ -12,7 +12,7 @@ const iconNameToCode = {
   android: "\uf17b",
   apple: "\uf179",
   amazon: "\uf270",
-  desktop: "\uf108",
+  desktop: "\uf109",
   mobile: "\uf10b",
   tv: "\uf26c",
   steam: "\uf1b6",
@@ -22,6 +22,11 @@ const iconNameToCode = {
 const ouiToIconCode = {
   "Cisco Systems Inc.": iconNameToCode.broadcast_tower,
   "Belkin International Inc.": iconNameToCode.broadcast_tower,
+  "ASUSTek Computer Inc.": iconNameToCode.broadcast_tower,
+  "ARRIS Group, Inc.": iconNameToCode.broadcast_tower,
+  "TP-Link Technologies Co. Ltd": iconNameToCode.broadcast_tower,
+  "Texas Instruments": iconNameToCode.broadcast_tower,
+  Netgear: iconNameToCode.broadcast_tower,
   Broadcom: "broadcom",
   "Intel Corporation": iconNameToCode.desktop,
   "LG Electronics (Mobile Communications)": iconNameToCode.android,
@@ -30,6 +35,7 @@ const ouiToIconCode = {
   "Samsung Electro-Mechanics(Thailand)": iconNameToCode.mobile,
   "Roku, Inc": iconNameToCode.tv,
   "Valve Corporation": iconNameToCode.steam,
+  "Amazon Technologies Inc.": iconNameToCode.amazon,
 };
 
 function companyToIconCode(company: string | null) {

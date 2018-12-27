@@ -1,4 +1,4 @@
-use crate::error::*;
+use super::*;
 
 #[derive(Debug)]
 pub enum FrameType {

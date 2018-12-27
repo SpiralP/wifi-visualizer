@@ -1,5 +1,4 @@
-use crate::error::*;
-use std::slice::Iter;
+use super::*;
 
 #[derive(Debug)]
 pub struct Flags {
@@ -14,8 +13,8 @@ pub struct Flags {
 }
 
 impl Flags {
-  pub fn parse(bytes: &mut Iter<u8>) -> Result<Flags> {
-    let byte = bytes.next().unwrap();
+  pub fn parse(bytes: &mut Cursor<Vec<u8>>) -> Result<Flags> {
+    let byte = bytes.read_u8().unwrap();
 
     let to_ds = byte & 0b0000_0001 != 0; // to Distribution System
     let from_ds = byte & 0b0000_0010 != 0; // from Distribution System

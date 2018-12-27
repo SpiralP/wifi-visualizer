@@ -11,7 +11,10 @@ pub struct BeaconFrame {
 }
 
 impl BeaconFrame {
-  pub fn parse(management_frame: ManagementFrame, bytes: &mut Iter<u8>) -> Result<BeaconFrame> {
+  pub fn parse(
+    management_frame: ManagementFrame,
+    bytes: &mut Cursor<Vec<u8>>,
+  ) -> Result<BeaconFrame> {
     let fixed_parameters = FixedParameters::parse(bytes)?;
     let tagged_parameters = TaggedParameters::parse(bytes)?;
 

@@ -1,5 +1,4 @@
-use crate::error::*;
-use std::slice::Iter;
+use super::*;
 
 #[derive(Debug)]
 pub struct CapabilitiesInfo {
@@ -20,9 +19,8 @@ pub struct CapabilitiesInfo {
 }
 
 impl CapabilitiesInfo {
-  pub fn parse(bytes: &mut Iter<u8>) -> Result<CapabilitiesInfo> {
-    bytes.next().unwrap();
-    bytes.next().unwrap();
+  pub fn parse(bytes: &mut Cursor<Vec<u8>>) -> Result<CapabilitiesInfo> {
+    bytes.read_u16::<LE>().unwrap();
 
     Ok(CapabilitiesInfo {})
   }

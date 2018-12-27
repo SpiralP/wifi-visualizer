@@ -1,19 +1,18 @@
-use serde::ser::*;
-use std::mem::transmute;
-use std::slice::Iter;
+use super::*;
+use serde::{Serialize, Serializer};
 
 #[derive(Copy, Clone, Eq, PartialEq, PartialOrd, Hash)]
 pub struct MacAddress([u8; 6]);
 
 impl MacAddress {
-  pub fn from(bytes: &mut Iter<u8>) -> MacAddress {
+  pub fn from(bytes: &mut Cursor<Vec<u8>>) -> MacAddress {
     MacAddress([
-      *bytes.next().unwrap(),
-      *bytes.next().unwrap(),
-      *bytes.next().unwrap(),
-      *bytes.next().unwrap(),
-      *bytes.next().unwrap(),
-      *bytes.next().unwrap(),
+      bytes.read_u8().unwrap(),
+      bytes.read_u8().unwrap(),
+      bytes.read_u8().unwrap(),
+      bytes.read_u8().unwrap(),
+      bytes.read_u8().unwrap(),
+      bytes.read_u8().unwrap(),
     ])
   }
 }
@@ -36,48 +35,12 @@ impl std::fmt::Debug for MacAddress {
 }
 
 impl Serialize for MacAddress {
-  fn serialize<S>(&self, serializer: S) -> Result<S::Ok, S::Error>
+  fn serialize<S>(&self, serializer: S) -> std::result::Result<S::Ok, S::Error>
   where
     S: Serializer,
   {
     Ok(serializer.serialize_str(&format!("{}", self))?)
   }
-}
-
-#[inline]
-pub fn bytes8_to_u64(bytes: &mut Iter<u8>) -> u64 {
-  let n: u64 = unsafe {
-    transmute([
-      *bytes.next().unwrap(),
-      *bytes.next().unwrap(),
-      *bytes.next().unwrap(),
-      *bytes.next().unwrap(),
-      *bytes.next().unwrap(),
-      *bytes.next().unwrap(),
-      *bytes.next().unwrap(),
-      *bytes.next().unwrap(),
-    ])
-  };
-  n.to_le()
-}
-
-#[inline]
-pub fn bytes4_to_u32(bytes: &mut Iter<u8>) -> u32 {
-  let n: u32 = unsafe {
-    transmute([
-      *bytes.next().unwrap(),
-      *bytes.next().unwrap(),
-      *bytes.next().unwrap(),
-      *bytes.next().unwrap(),
-    ])
-  };
-  n.to_le()
-}
-
-#[inline]
-pub fn bytes2_to_u16(bytes: &mut Iter<u8>) -> u16 {
-  let n: u16 = unsafe { transmute([*bytes.next().unwrap(), *bytes.next().unwrap()]) };
-  n.to_le()
 }
 
 pub fn hash_macs(mac1: MacAddress, mac2: MacAddress) -> String {
