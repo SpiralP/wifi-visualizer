@@ -105,7 +105,7 @@ impl Handler for Server {
         let mut store = {
           let out = out.clone();
           Store::new(Box::new(move |event| {
-            println!("{:?}", event);
+            // println!("{:?}", event);
             out.send(serde_json::to_string(&event).unwrap()).unwrap();
           }))
         };

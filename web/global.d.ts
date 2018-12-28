@@ -10,35 +10,32 @@ declare interface StationFrameKind {
 }
 declare type FrameKind = AccessPointFrameKind | StationFrameKind;
 
-declare interface NewAddressFrameEvent {
+declare type ConnectionType = "Associated" | "Disassociated" | "InRange";
+
+declare interface FrameEventPrototype {
+  type: string;
+  data: any;
+  t: number; // milliseconds from Date.now()
+}
+declare interface NewAddressFrameEvent extends FrameEventPrototype {
   type: "NewAddress";
   data: MacAddress;
 }
-declare interface SetKindFrameEvent {
+declare interface SetKindFrameEvent extends FrameEventPrototype {
   type: "SetKind";
   data: [MacAddress, FrameKind];
 }
-declare interface NewConnectionFrameEvent {
-  type: "NewConnection";
-  data: [MacAddress, MacAddress];
+declare interface ConnectionFrameEvent extends FrameEventPrototype {
+  type: "Connection";
+  data: [MacAddress, MacAddress, ConnectionType];
 }
-declare interface RemoveConnectionFrameEvent {
-  type: "RemoveConnection";
-  data: [MacAddress, MacAddress];
-}
-declare interface ProbeRequestFrameEvent {
+declare interface ProbeRequestFrameEvent extends FrameEventPrototype {
   type: "ProbeRequest";
   data: [MacAddress, ByteArray];
-}
-declare interface ProbeResponseFrameEvent {
-  type: "ProbeResponse";
-  data: [MacAddress, MacAddress, ByteArray];
 }
 
 declare type FrameEvent =
   | NewAddressFrameEvent
   | SetKindFrameEvent
-  | NewConnectionFrameEvent
-  | RemoveConnectionFrameEvent
-  | ProbeRequestFrameEvent
-  | ProbeResponseFrameEvent;
+  | ConnectionFrameEvent
+  | ProbeRequestFrameEvent;
