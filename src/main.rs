@@ -1,11 +1,11 @@
 mod error;
 mod events;
 mod ieee802_11;
-mod pcap;
+mod pcap_parser;
 
 use self::events::*;
 use self::ieee802_11::*;
-use self::pcap::{start_file_capture, start_live_capture, PacketWithHeader, Status};
+use self::pcap_parser::{start_file_capture, start_live_capture, PacketWithHeader, Status};
 use boxfnonce::BoxFnOnce;
 use std::sync::mpsc::Receiver;
 use ws::{listen, CloseCode, Handler, Handshake, Message, Result, Sender};
@@ -72,9 +72,22 @@ impl Handler for Server {
   fn on_open(&mut self, shake: Handshake) -> Result<()> {
     println!("ws on_open");
 
+    let mut parts = shake.request.resource().split("/");
+    parts.next(); // skip first /
+
+    let root = parts.next().unwrap_or("");
+    let rest = {
+      let ag = parts.collect::<Vec<&str>>().join("/");
+      if ag == "" {
+        None
+      } else {
+        Some(ag)
+      }
+    };
+
     let (receiver, stop_sniff): (Receiver<Status<PacketWithHeader>>, BoxFnOnce<'static, ()>) =
-      match shake.request.resource() {
-        "/test" => {
+      match root {
+        "test" => {
           let (sender, receiver) = std::sync::mpsc::channel();
           for data in &[&BEACON[..], &PROBE_RESPONSE_RETRY[..], &DATA_FROM_DS[..]] {
             sender
@@ -88,8 +101,8 @@ impl Handler for Server {
 
           (receiver, BoxFnOnce::from(|| {}))
         }
-        "/file" => start_file_capture(r"./hotel.cap").unwrap(),
-        "/live" => start_live_capture(std::env::args().nth(1)).unwrap(),
+        "file" => start_file_capture(rest.expect("no filename given")).unwrap(),
+        "live" => start_live_capture(rest).unwrap(),
         _ => {
           return self.out.close(ws::CloseCode::Normal);
         }

@@ -1,6 +1,5 @@
 import {
   hashMacs,
-  setNamedTimeout,
   iconNameToCode,
   companyToIconCode,
   connect,
@@ -138,7 +137,7 @@ function handleFrameEvent(event: FrameEvent) {
 
 let firstFrame: number;
 connect(
-  "file",
+  "file/caps/bap.cap",
   (data) => {
     if (!firstFrame) {
       firstFrame = Date.now();
@@ -154,5 +153,7 @@ connect(
     // );
   }
 )
-  .then(() => {})
+  .then(() => {
+    console.log("ws done");
+  })
   .catch((e) => console.error(e));

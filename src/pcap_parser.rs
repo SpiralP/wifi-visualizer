@@ -64,7 +64,7 @@ pub fn start_live_capture(
   Ok(start_capture(cap)?)
 }
 
-fn get_file_capture(file_path: &str) -> Result<Capture<Offline>> {
+fn get_file_capture(file_path: String) -> Result<Capture<Offline>> {
   Ok(Capture::from_file(file_path)?)
 }
 
@@ -76,7 +76,7 @@ fn test_file_capture() {
 }
 
 pub fn start_file_capture(
-  file_path: &str,
+  file_path: String,
 ) -> Result<(Receiver<Status<PacketWithHeader>>, BoxFnOnce<'static, ()>)> {
   let cap = get_file_capture(file_path)?;
 
@@ -142,6 +142,7 @@ fn test_strip_radiotap() {
 fn start_capture<T: ::pcap::Activated + Send + 'static>(
   mut cap: Capture<T>,
 ) -> Result<(Receiver<Status<PacketWithHeader>>, BoxFnOnce<'static, ()>)> {
+  #[allow(clippy::mutex_atomic)]
   let stop = Arc::new(Mutex::new(false));
 
   let (sender, receiver) = channel();
