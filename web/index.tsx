@@ -69,13 +69,13 @@ network.on("click", (event: { nodes: Array<string>; edges: Array<string> }) => {
 
 function handleFrameEvent(event: FrameEvent) {
   if (event.type === "NewAddress") {
-    const mac = event.data;
-    const company = oui(mac);
+    const id = event.data;
+    const company = oui(id);
 
-    nodes.add({
-      id: mac,
-      icon: { code: companyToIconCode(company) },
-      title: company ? `${htmlEscape(company)}<br />${mac}` : mac,
+    nodes.update({
+      id,
+      icon: { code: companyToIconCode(company), size: 50 },
+      title: company ? `${htmlEscape(company)}<br />${id}` : id,
     });
   } else if (event.type === "SetKind") {
     const [id, kind] = event.data;
@@ -123,6 +123,14 @@ function handleFrameEvent(event: FrameEvent) {
     const [from, ssidBytes] = event.data;
     const ssid = byteArrayToString(ssidBytes);
     nodes.update({ id: from, title: ssid });
+  } else if (event.type === "InactiveAddress") {
+    const addrs = event.data;
+    addrs.forEach((id) => {
+      nodes.update({
+        id,
+        icon: { size: 25 },
+      });
+    });
   } else {
     console.warn(event);
   }
@@ -137,13 +145,13 @@ connect(
     }
 
     handleFrameEvent(data);
-    setNamedTimeout(
-      "bap",
-      () => {
-        console.log(`burst took ${Date.now() - 1000 - firstFrame} ms`);
-      },
-      1000
-    );
+    // setNamedTimeout(
+    //   "bap",
+    //   () => {
+    //     console.log(`burst took ${Date.now() - 1000 - firstFrame} ms`);
+    //   },
+    //   1000
+    // );
   }
 )
   .then(() => {})

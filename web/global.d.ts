@@ -15,7 +15,6 @@ declare type ConnectionType = "Associated" | "Disassociated" | "InRange";
 declare interface FrameEventPrototype {
   type: string;
   data: any;
-  t: number; // milliseconds from Date.now()
 }
 declare interface NewAddressFrameEvent extends FrameEventPrototype {
   type: "NewAddress";
@@ -33,9 +32,14 @@ declare interface ProbeRequestFrameEvent extends FrameEventPrototype {
   type: "ProbeRequest";
   data: [MacAddress, ByteArray];
 }
+declare interface InactiveAddressFrameEvent extends FrameEventPrototype {
+  type: "InactiveAddress";
+  data: MacAddress[];
+}
 
 declare type FrameEvent =
   | NewAddressFrameEvent
   | SetKindFrameEvent
   | ConnectionFrameEvent
-  | ProbeRequestFrameEvent;
+  | ProbeRequestFrameEvent
+  | InactiveAddressFrameEvent;

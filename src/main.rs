@@ -8,7 +8,7 @@ use self::ieee802_11::*;
 use self::pcap::{start_file_capture, start_live_capture, PacketWithHeader, Status};
 use boxfnonce::BoxFnOnce;
 use std::sync::mpsc::Receiver;
-use ws::{listen, CloseCode, Handler, Message, Result, Sender};
+use ws::{listen, CloseCode, Handler, Handshake, Message, Result, Sender};
 
 const DATA_FROM_DS: [u8; 193] = [
   0x08, 0x02, 0x00, 0x00, 0x01, 0x00, 0x5e, 0x7f, 0xff, 0xfa, 0xe8, 0xed, 0xf3, 0x10, 0xa8, 0x10,
@@ -69,13 +69,12 @@ struct Server {
 }
 
 impl Handler for Server {
-  fn on_message(&mut self, msg: Message) -> Result<()> {
-    // incoming message
-    println!("incoming message {:?}", msg);
+  fn on_open(&mut self, shake: Handshake) -> Result<()> {
+    println!("ws on_open");
 
     let (receiver, stop_sniff): (Receiver<Status<PacketWithHeader>>, BoxFnOnce<'static, ()>) =
-      match msg.into_text().unwrap().as_str() {
-        "test" => {
+      match shake.request.resource() {
+        "/test" => {
           let (sender, receiver) = std::sync::mpsc::channel();
           for data in &[&BEACON[..], &PROBE_RESPONSE_RETRY[..], &DATA_FROM_DS[..]] {
             sender
@@ -89,8 +88,8 @@ impl Handler for Server {
 
           (receiver, BoxFnOnce::from(|| {}))
         }
-        "file" => start_file_capture(r"./all.cap").unwrap(),
-        "live" => start_live_capture(std::env::args().nth(1)).unwrap(),
+        "/file" => start_file_capture(r"./hotel.cap").unwrap(),
+        "/live" => start_live_capture(std::env::args().nth(1)).unwrap(),
         _ => {
           return self.out.close(ws::CloseCode::Normal);
         }
@@ -101,11 +100,11 @@ impl Handler for Server {
     {
       let out = self.out.clone();
       std::thread::spawn(move || {
-        // let mut last_time = 0;
+        let mut maybe_last_time = None;
         let mut store = {
           let out = out.clone();
           Store::new(Box::new(move |event| {
-            // println!("{:?}", event);
+            println!("{:?}", event);
             out.send(serde_json::to_string(&event).unwrap()).unwrap();
           }))
         };
@@ -116,13 +115,16 @@ impl Handler for Server {
             Status::Active(packet) => {
               // println!("{:#?}", packet.header);
 
-              // let current_time = (packet.header.ts.tv_sec as u64) * 100_0000u64
-              //   + (packet.header.ts.tv_usec as u64);
-              // if last_time != 0 {
-              //   let diff = current_time.checked_sub(last_time).unwrap_or(0);
-              //   std::thread::sleep(std::time::Duration::from_micros(diff));
-              // }
-              // last_time = current_time;
+              let current_time = std::time::Duration::new(
+                packet.header.ts.tv_sec as u64,
+                (packet.header.ts.tv_usec * 1000) as u32,
+              );
+              if let Some(last_time) = maybe_last_time {
+                if current_time > last_time {
+                  std::thread::sleep(current_time - last_time);
+                }
+              }
+              maybe_last_time = Some(current_time);
 
               let mut cursor = std::io::Cursor::new(packet.data);
               let parsed_frame = Frame::parse(&mut cursor).unwrap();
@@ -144,6 +146,12 @@ impl Handler for Server {
     }
 
     Ok(()) // don't close yet
+  }
+
+  fn on_message(&mut self, msg: Message) -> Result<()> {
+    // incoming message
+    println!("incoming message {:?}", msg);
+    Ok(())
   }
 
   fn on_close(&mut self, _code: CloseCode, _reason: &str) {

@@ -47,6 +47,7 @@ export const ouiToIconCode = {
   "Tp Link": iconNameToCode.broadcast_tower,
   "Texas Instruments": iconNameToCode.broadcast_tower,
   Netgear: iconNameToCode.broadcast_tower,
+  "Ruckus Wireless": iconNameToCode.broadcast_tower,
   Intel: iconNameToCode.desktop,
   LG: iconNameToCode.android,
   Apple: iconNameToCode.apple,
@@ -85,17 +86,17 @@ export function companyToIconCode(company?: string) {
 }
 
 export async function connect(
-  hello: string,
+  kind: string,
   callback: (event: FrameEvent) => void
 ) {
-  const ws = new WebSocket("ws://localhost:3012/");
+  const ws = new WebSocket(`ws://localhost:3012/${kind}`);
 
   ws.onmessage = function message(data) {
     const frameEvent: FrameEvent = JSON.parse(data.data);
-    frameEvent.t = Date.now();
     callback(frameEvent);
   };
 
+  // wait for onopen
   await new Promise((resolve, reject) => {
     ws.onerror = function error(err) {
       reject(err);
@@ -105,8 +106,7 @@ export async function connect(
     };
   });
 
-  ws.send(hello);
-
+  // wait for onclose
   await new Promise((resolve, reject) => {
     ws.onerror = function error(err) {
       reject(err);
