@@ -1,13 +1,10 @@
-mod error;
-mod events;
-mod ieee802_11;
-mod pcap_parser;
-
-use self::events::*;
-use self::ieee802_11::*;
-use self::pcap_parser::{start_file_capture, start_live_capture, PacketWithHeader, Status};
 use boxfnonce::BoxFnOnce;
 use std::sync::mpsc::Receiver;
+use wifi_visualizer::events::*;
+use wifi_visualizer::ieee802_11::*;
+use wifi_visualizer::pcap_parser::{
+  start_file_capture, start_live_capture, PacketWithHeader, Status,
+};
 use ws::{listen, CloseCode, Handler, Handshake, Message, Result, Sender};
 
 const DATA_FROM_DS: [u8; 193] = [

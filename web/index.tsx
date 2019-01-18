@@ -137,7 +137,7 @@ function handleFrameEvent(event: FrameEvent) {
 
 let firstFrame: number;
 connect(
-  "file/caps/bap.cap",
+  "live",
   (data) => {
     if (!firstFrame) {
       firstFrame = Date.now();
