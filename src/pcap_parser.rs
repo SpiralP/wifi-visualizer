@@ -1,7 +1,7 @@
 use crate::error::*;
-use ::pcap::Error as PcapError;
-use ::pcap::*;
 use boxfnonce::BoxFnOnce;
+use pcap::Error as PcapError;
+use pcap::{Active, Capture, Device, Offline, PacketHeader};
 use radiotap::Radiotap;
 use std::sync::mpsc::*;
 use std::sync::*;
@@ -26,6 +26,11 @@ pub fn get_interface(maybe_search: Option<String>) -> Result<Device> {
   Err("No interface found".into())
 }
 
+#[test]
+fn test_get_interface() {
+  println!("{:#?}", get_interface(None).unwrap());
+}
+
 pub struct PacketWithHeader {
   pub header: PacketHeader,
   pub data: Vec<u8>,
@@ -41,17 +46,41 @@ fn get_live_capture(dev: Device) -> Result<Capture<Active>> {
 
   Ok(
     Capture::from_device(dev)?
+      .immediate_mode(true)
       .promisc(true)
       .timeout(1000)
-      .open()?
-      .immediate_mode(true),
+      .open()?,
   )
 }
 
 #[test]
 fn test_live_capture() {
-  let cap = get_live_capture(get_interface(None).unwrap()).unwrap();
+  #[cfg(windows)]
+  let iface = Some(r"\Device\NPF_{1207900A-6848-40D9-B1C2-860E3F27FE74}".to_string());
+
+  #[cfg(not(windows))]
+  let iface: Option<String> = None;
+
+  let mut cap = get_live_capture(get_interface(iface).unwrap()).unwrap();
+  println!("{:#?}", cap.get_datalink());
   println!("{:#?}", cap.list_datalinks().unwrap());
+
+  loop {
+    match cap.next() {
+      Err(ref err) => match err {
+        PcapError::TimeoutExpired => {
+          // this is called on windows at least!
+        }
+        _ => {
+          panic!("{}", err);
+        }
+      },
+      Ok(ref packet) => {
+        println!("packet {:#?}", packet);
+        break;
+      }
+    }
+  }
 }
 
 pub fn start_live_capture(
@@ -70,8 +99,7 @@ fn get_file_capture(file_path: String) -> Result<Capture<Offline>> {
 
 #[test]
 fn test_file_capture() {
-  println!("BAP");
-  let cap = get_file_capture("./bap.cap").unwrap();
+  let cap = get_file_capture("./caps/bap.cap".to_string()).unwrap();
   println!("{:#?}", cap.list_datalinks().unwrap());
 }
 
@@ -172,7 +200,7 @@ fn start_capture<T: ::pcap::Activated + Send + 'static>(
           Err(ref err) => match err {
             PcapError::NoMorePackets => break,
             PcapError::TimeoutExpired => {
-              panic!("test if this is ever called");
+              // this is called on windows at least!
             }
             _ => {
               panic!("{}", err);
