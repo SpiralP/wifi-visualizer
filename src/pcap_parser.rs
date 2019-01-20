@@ -118,7 +118,7 @@ fn strip_radiotap(bytes: &[u8]) -> &[u8] {
   let has_fcs = radiotap.flags.map(|flags| flags.fcs).unwrap_or(false);
 
   if has_fcs {
-    // remove last 4 bytes
+    // remove last 4 bytes (uint32_t)
     let (data, _fcs) = rest.split_at(rest.len() - 4);
     data
   } else {

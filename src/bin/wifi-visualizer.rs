@@ -131,6 +131,7 @@ fn main() {
 }
 
 #[test]
+#[cfg_attr(target_os = "windows", ignore)]
 fn test_live_frame_parse() {
   let (receiver, _stop_sniff) = start_live_capture(None).unwrap();
   let status = receiver.recv().unwrap();

@@ -14,8 +14,10 @@ fn criterion_benchmark(c: &mut Criterion) {
   c.bench_function("BasicFrame::parse PROBE_RESPONSE_RETRY", |b| {
     b.iter(|| BasicFrame::parse(&mut Cursor::new(PROBE_RESPONSE_RETRY.to_vec())).unwrap())
   });
+  c.bench_function("BasicFrame::parse RADIOTAP_FRAME_WITH_FCS", |b| {
+    b.iter(|| BasicFrame::parse(&mut Cursor::new(RADIOTAP_FRAME_WITH_FCS.to_vec())).unwrap())
+  });
 }
 
 criterion_group!(benches, criterion_benchmark);
-
 criterion_main!(benches);
