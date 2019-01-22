@@ -3,21 +3,21 @@ mod util;
 
 pub use self::store::*;
 pub use self::util::*;
-use packet::ieee802_11::*;
+use ieee802_11::*;
 
-pub fn handle_frame(frame: &IEEE802_11Frame, store: &mut Store) {
+pub fn handle_frame(frame: &Frame, store: &mut Store) {
   let their_address = frame.receiver_address();
   store.add_address(their_address);
 
   let my_address;
   match frame.next_layer() {
-    IEEE802_11FrameLayer::Management(management_frame) => {
+    FrameLayer::Management(management_frame) => {
       my_address = management_frame.transmitter_address();
     }
-    IEEE802_11FrameLayer::Control(control_frame) => {
+    FrameLayer::Control(control_frame) => {
       my_address = control_frame.transmitter_address();
     }
-    IEEE802_11FrameLayer::Data(data_frame) => {
+    FrameLayer::Data(data_frame) => {
       my_address = data_frame.transmitter_address();
     }
   }
@@ -88,7 +88,7 @@ pub fn handle_frame(frame: &IEEE802_11Frame, store: &mut Store) {
   }
 
   // frames with special info that's sent
-  if let IEEE802_11FrameLayer::Management(ref management_frame) = frame.next_layer() {
+  if let FrameLayer::Management(ref management_frame) = frame.next_layer() {
     if let Some(management_frame_layer) = management_frame.next_layer() {
       match management_frame_layer {
         ManagementFrameLayer::Beacon(ref beacon_frame) => {
