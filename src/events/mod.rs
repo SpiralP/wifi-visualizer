@@ -1,30 +1,35 @@
 pub mod store;
+mod util;
 
 pub use self::store::*;
-use crate::ieee802_11::frame_control::*;
-use crate::ieee802_11::*;
+pub use self::util::*;
+use packet::ieee802_11::*;
 
-pub fn handle_frame(frame: Frame, store: &mut Store) {
-  let basic_frame = match frame {
-    Frame::Basic(ref frame) => &frame,
-    Frame::Beacon(ref frame) => &frame.management_frame.basic_frame,
-    Frame::ProbeRequest(ref frame) => &frame.management_frame.basic_frame,
-    Frame::ProbeResponse(ref frame) => &frame.management_frame.basic_frame,
-    Frame::Management(ref frame) => &frame.basic_frame,
-  };
+pub fn handle_frame(frame: &IEEE802_11Frame, store: &mut Store) {
+  let their_address = frame.receiver_address();
+  store.add_address(their_address);
 
-  if let Some(transmitter_address) = basic_frame.transmitter_address {
-    store.add_address(transmitter_address);
+  let my_address;
+  match frame.next_layer() {
+    IEEE802_11FrameLayer::Management(management_frame) => {
+      my_address = management_frame.transmitter_address();
+    }
+    IEEE802_11FrameLayer::Control(control_frame) => {
+      my_address = control_frame.transmitter_address();
+    }
+    IEEE802_11FrameLayer::Data(data_frame) => {
+      my_address = data_frame.transmitter_address();
+    }
   }
 
-  if let Some(receiver_address) = basic_frame.receiver_address {
-    store.add_address(receiver_address);
+  if let Some(transmitter_address) = my_address {
+    store.add_address(transmitter_address);
   }
 
   // check for connections
   let mut is_associated = false;
-  match basic_frame.type_ {
-    FrameType::Data(ref subtype) => {
+  match frame.subtype() {
+    FrameSubtype::Data(ref subtype) => {
       match subtype {
         DataSubtype::Data | DataSubtype::QoSData => {
           // most likely a connection
@@ -37,7 +42,7 @@ pub fn handle_frame(frame: Frame, store: &mut Store) {
       }
     }
 
-    FrameType::Management(ref subtype) => match subtype {
+    FrameSubtype::Management(ref subtype) => match subtype {
       ManagementSubtype::Authentication
       | ManagementSubtype::AssociationRequest
       | ManagementSubtype::AssociationResponse
@@ -56,12 +61,8 @@ pub fn handle_frame(frame: Frame, store: &mut Store) {
         // Deauthentication is from AP
 
         store.change_connection(
-          basic_frame
-            .transmitter_address
-            .expect("no ta on disassociation"),
-          basic_frame
-            .receiver_address
-            .expect("no ra on disassociation"),
+          their_address,
+          my_address.expect("no my_address on disassociation"),
           ConnectionType::Disassociated,
         );
       }
@@ -71,64 +72,53 @@ pub fn handle_frame(frame: Frame, store: &mut Store) {
       }
     },
 
-    FrameType::Control(_) => {
+    FrameSubtype::Control(_) => {
       // anyone in range will use these
     }
   }
 
   // if two nodes are communicating
-  if let Some(receiver_address) = basic_frame.receiver_address {
-    if let Some(transmitter_address) = basic_frame.transmitter_address {
-      if is_associated {
-        store.change_connection(
-          transmitter_address,
-          receiver_address,
-          ConnectionType::Associated,
-        );
-      } else {
-        // ra & ta have communicated!
-        store.change_connection(
-          transmitter_address,
-          receiver_address,
-          ConnectionType::InRange,
-        );
-      }
+  if let Some(my_address) = my_address {
+    if is_associated {
+      store.change_connection(my_address, their_address, ConnectionType::Associated);
+    } else {
+      // ra & ta have communicated!
+      store.change_connection(my_address, their_address, ConnectionType::InRange);
     }
   }
 
   // frames with special info that's sent
-  match frame {
-    Frame::Beacon(ref beacon_frame) => {
-      store.change_kind(
-        basic_frame.transmitter_address.expect("no ta on Beacon"),
-        Kind::AccessPoint(beacon_frame.ssid.clone()),
-      );
-    }
+  if let IEEE802_11FrameLayer::Management(ref management_frame) = frame.next_layer() {
+    if let Some(management_frame_layer) = management_frame.next_layer() {
+      match management_frame_layer {
+        ManagementFrameLayer::Beacon(ref beacon_frame) => {
+          if let Some(ssid) = beacon_frame.ssid() {
+            store.change_kind(
+              my_address.expect("no ta on Beacon"),
+              Kind::AccessPoint(ssid),
+            );
+          }
+        }
 
-    Frame::ProbeResponse(ref probe_response_frame) => {
-      store.change_kind(
-        basic_frame
-          .transmitter_address
-          .expect("no ta on ProbeResponse"),
-        Kind::AccessPoint(probe_response_frame.ssid.clone()),
-      );
-    }
+        ManagementFrameLayer::ProbeResponse(ref probe_response_frame) => {
+          if let Some(ssid) = probe_response_frame.ssid() {
+            store.change_kind(
+              my_address.expect("no ta on ProbeResponse"),
+              Kind::AccessPoint(ssid),
+            );
+          }
+        }
 
-    Frame::ProbeRequest(ref probe_request_frame) => {
-      if !probe_request_frame.ssid.is_empty() {
-        let ta = probe_request_frame
-          .management_frame
-          .basic_frame
-          .transmitter_address
-          .expect("no ta on ProbeRequest");
-
-        store.probe_request(ta, probe_request_frame.ssid.clone());
+        ManagementFrameLayer::ProbeRequest(ref probe_request_frame) => {
+          if let Some(ssid) = probe_request_frame.ssid() {
+            if !ssid.is_empty() {
+              store.probe_request(my_address.expect("no ta on ProbeRequest"), ssid);
+            }
+          }
+        }
       }
     }
-
-    _ => {}
   }
 
-  // TODO check for inactive nodes
   store.check_for_inactive();
 }

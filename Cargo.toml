@@ -8,6 +8,7 @@ edition = "2018"
 boxfnonce = "0.1.0"
 byteorder = "1.2.7"
 error-chain = "0.12.0"
+packet = { path = "../rust-packet", features = ["serde"] }
 pcap = { git = "https://github.com/SpiralP/rust-pcap.git" }
 radiotap = "1.3.0"
 serde = "1.0.84"

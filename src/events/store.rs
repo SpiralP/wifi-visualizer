@@ -1,4 +1,5 @@
-use crate::ieee802_11::util::*;
+use super::*;
+use packet::MacAddress;
 use serde_derive::*;
 use std::collections::HashMap;
 use std::collections::HashSet;

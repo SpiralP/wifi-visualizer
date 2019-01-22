@@ -1,7 +1,7 @@
 use boxfnonce::BoxFnOnce;
+use packet::ieee802_11::*;
 use std::sync::mpsc::Receiver;
 use wifi_visualizer::events::*;
-use wifi_visualizer::ieee802_11::*;
 use wifi_visualizer::pcap_parser::{
   start_file_capture, start_live_capture, PacketWithHeader, Status,
 };
@@ -85,11 +85,9 @@ impl Handler for Server {
               }
               maybe_last_time = Some(current_time);
 
-              let mut cursor = std::io::Cursor::new(packet.data);
-              let parsed_frame = Frame::parse(&mut cursor).unwrap();
-              // println!("{:#?}", parsed_frame);
+              let frame = IEEE802_11Frame::new(&packet.data);
 
-              handle_frame(parsed_frame, &mut store);
+              handle_frame(&frame, &mut store);
             }
             Status::Finished => {
               break;
@@ -136,9 +134,8 @@ fn test_live_frame_parse() {
   let (receiver, _stop_sniff) = start_live_capture(None).unwrap();
   let status = receiver.recv().unwrap();
   if let Status::Active(packet) = status {
-    let mut c = std::io::Cursor::new(packet.data);
-    let parsed_frame = Frame::parse(&mut c).unwrap();
-    println!("{:#?}", parsed_frame);
+    let frame = IEEE802_11Frame::new(&packet.data);
+    println!("{:#?}", frame.receiver_address());
   } else {
     panic!("not Status::Active");
   }
