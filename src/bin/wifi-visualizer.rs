@@ -1,5 +1,5 @@
 use boxfnonce::BoxFnOnce;
-use ieee802_11::*;
+use ieee80211::*;
 use std::sync::mpsc::Receiver;
 use wifi_visualizer::events::*;
 use wifi_visualizer::pcap_parser::{

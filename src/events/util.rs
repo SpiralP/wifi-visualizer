@@ -1,4 +1,4 @@
-use ieee802_11::MacAddress;
+use ieee80211::MacAddress;
 
 pub fn hash_macs(mac1: MacAddress, mac2: MacAddress) -> String {
   if mac1 >= mac2 {

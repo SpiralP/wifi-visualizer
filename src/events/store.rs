@@ -1,5 +1,5 @@
 use super::*;
-use ieee802_11::MacAddress;
+use ieee80211::MacAddress;
 use serde_derive::*;
 use std::collections::HashMap;
 use std::collections::HashSet;

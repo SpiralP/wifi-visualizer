@@ -69,6 +69,7 @@ network.on("click", (event: { nodes: Array<string>; edges: Array<string> }) => {
 function handleFrameEvent(event: FrameEvent) {
   if (event.type === "NewAddress") {
     const id = event.data;
+    console.log(id);
     const company = oui(id);
 
     nodes.update({
@@ -137,7 +138,7 @@ function handleFrameEvent(event: FrameEvent) {
 
 let firstFrame: number;
 connect(
-  "file/caps/home.cap",
+  "file/caps/miracosta.cap",
   (data) => {
     if (!firstFrame) {
       firstFrame = Date.now();

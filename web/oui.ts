@@ -3,7 +3,7 @@ const ouiData: {
 } = require("./oui_data.json");
 
 export default function oui(mac: string): string | undefined {
-  // mac in format 11:22:33:44:55:66
+  // mac in format 11-22-33-44-55-66
   const cleanMac = mac.replace(/[\: \-]/g, "").toUpperCase();
   const companyOrObject = ouiData[cleanMac.slice(0, 6)];
   if (!companyOrObject) return;
