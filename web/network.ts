@@ -121,7 +121,7 @@ function handleFrameEvent(event: FrameEvent) {
   } else if (event.type === "ProbeRequest") {
     const [from, ssidBytes] = event.data;
     const ssid = byteArrayToString(ssidBytes);
-    nodes.update({ id: from, title: ssid });
+    nodes.update({ id: from, label: ssid });
   } else if (event.type === "InactiveAddress") {
     const addrs = event.data;
     addrs.forEach((id) => {
@@ -138,7 +138,7 @@ function handleFrameEvent(event: FrameEvent) {
 export default function start(ifname: string = "live/wlan0mon") {
   let firstFrame: number;
   return connect(
-    "live/wlan0mon",
+    ifname,
     (data) => {
       if (!firstFrame) {
         firstFrame = Date.now();

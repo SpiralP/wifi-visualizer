@@ -66,7 +66,7 @@ impl Handler for Server {
     {
       let out = self.out.clone();
       std::thread::spawn(move || {
-        let mut maybe_last_time = None;
+        let mut maybe_last_time: Option<std::time::Duration> = None;
         let mut store = {
           let out = out.clone();
           Store::new(Box::new(move |event| {
