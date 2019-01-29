@@ -1,11 +1,14 @@
+mod error;
+mod events;
+mod pcap_parser;
+mod test_packets;
+
+use self::events::*;
+use self::pcap_parser::*;
+use self::test_packets::*;
 use boxfnonce::BoxFnOnce;
 use ieee80211::*;
 use std::sync::mpsc::Receiver;
-use wifi_visualizer::events::*;
-use wifi_visualizer::pcap_parser::{
-  start_file_capture, start_live_capture, PacketWithHeader, Status,
-};
-use wifi_visualizer::test_packets::*;
 use ws::{listen, CloseCode, Handler, Handshake, Message, Result, Sender};
 
 // Server WebSocket handler
