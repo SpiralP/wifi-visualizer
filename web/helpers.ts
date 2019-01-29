@@ -48,6 +48,7 @@ export const ouiToIconCode = {
   "Texas Instruments": iconNameToCode.broadcast_tower,
   Netgear: iconNameToCode.broadcast_tower,
   "Ruckus Wireless": iconNameToCode.broadcast_tower,
+  Aruba: iconNameToCode.broadcast_tower,
   Intel: iconNameToCode.desktop,
   LG: iconNameToCode.android,
   Apple: iconNameToCode.apple,

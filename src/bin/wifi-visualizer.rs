@@ -31,6 +31,7 @@ impl Handler for Server {
       }
     };
 
+    let mut is_file = false;
     let (receiver, stop_sniff): (Receiver<Status<PacketWithHeader>>, BoxFnOnce<'static, ()>) =
       match root {
         "test" => {
@@ -47,10 +48,13 @@ impl Handler for Server {
 
           (receiver, BoxFnOnce::from(|| {}))
         }
-        "file" => start_file_capture(rest.expect("no filename given")).unwrap(),
+        "file" => {
+          is_file = true;
+          start_file_capture(rest.expect("no filename given")).unwrap()
+        }
         "live" => start_live_capture(rest).unwrap(),
         _ => {
-          return self.out.close(ws::CloseCode::Normal);
+          return self.out.close(ws::CloseCode::Error);
         }
       };
 
@@ -74,19 +78,20 @@ impl Handler for Server {
             Status::Active(packet) => {
               // println!("{:#?}", packet.header);
 
-              let current_time = std::time::Duration::new(
-                packet.header.ts.tv_sec as u64,
-                (packet.header.ts.tv_usec * 1000) as u32,
-              );
-              if let Some(last_time) = maybe_last_time {
-                if current_time > last_time {
-                  std::thread::sleep(current_time - last_time);
+              if is_file {
+                let current_time = std::time::Duration::new(
+                  packet.header.ts.tv_sec as u64,
+                  (packet.header.ts.tv_usec * 1000) as u32,
+                );
+                if let Some(last_time) = maybe_last_time {
+                  if current_time > last_time {
+                    std::thread::sleep(current_time - last_time);
+                  }
                 }
+                maybe_last_time = Some(current_time);
               }
-              maybe_last_time = Some(current_time);
 
               let frame = Frame::new(&packet.data);
-
               handle_frame(&frame, &mut store);
             }
             Status::Finished => {

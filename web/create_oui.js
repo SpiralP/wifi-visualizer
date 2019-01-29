@@ -70,6 +70,7 @@ new Promise((resolve, reject) => {
           .replace(/ Electro\-Mechanics$/i, "")
           .replace(/ COMPUTER$/i, "")
           .replace(/ Inc\./, "")
+          .replace(/, a Hewlett Packard Enterprise Company/, "")
 
           .replace(/ Corporate$/i, "")
           .replace(/ Corporation$/i, "")
