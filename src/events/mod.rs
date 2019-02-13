@@ -116,6 +116,8 @@ pub fn handle_frame(frame: &Frame, store: &mut Store) {
             }
           }
         }
+
+        _ => {}
       }
     }
   }

@@ -9,5 +9,5 @@ if (module.hot != null) {
   });
 }
 
-// start("live/wlan0mon");
-start("file/caps/miracosta.cap");
+start("live/wlan0mon");
+// start("file/caps/miracosta.cap");
