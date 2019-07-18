@@ -1,10 +1,8 @@
 use crate::error::*;
 use boxfnonce::BoxFnOnce;
-use pcap::Error as PcapError;
-use pcap::{Active, Capture, Device, Offline, PacketHeader};
+use pcap::{Active, Capture, Device, Error as PcapError, Offline, PacketHeader};
 use radiotap::Radiotap;
-use std::sync::mpsc::*;
-use std::sync::*;
+use std::sync::{mpsc::*, *};
 
 const LINKTYPE_IEEE802_11: i32 = 105;
 const LINKTYPE_IEEE802_11_RADIOTAP: i32 = 127;

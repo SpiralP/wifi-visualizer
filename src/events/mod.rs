@@ -1,8 +1,7 @@
 pub mod store;
 mod util;
 
-pub use self::store::*;
-pub use self::util::*;
+pub use self::{store::*, util::*};
 use ieee80211::*;
 
 pub fn handle_frame(frame: &Frame, store: &mut Store) {

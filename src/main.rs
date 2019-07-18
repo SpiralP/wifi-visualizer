@@ -3,9 +3,7 @@ mod events;
 mod pcap_parser;
 mod test_packets;
 
-use self::events::*;
-use self::pcap_parser::*;
-use self::test_packets::*;
+use self::{events::*, pcap_parser::*, test_packets::*};
 use boxfnonce::BoxFnOnce;
 use ieee80211::*;
 use std::sync::mpsc::Receiver;
