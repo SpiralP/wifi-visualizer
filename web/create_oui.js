@@ -2,6 +2,8 @@ const fs = require("fs");
 const https = require("https");
 
 new Promise((resolve, reject) => {
+  console.log("get");
+
   https
     .get(
       "https://code.wireshark.org/review/gitweb?p=wireshark.git;a=blob_plain;f=manuf;hb=HEAD",
@@ -23,6 +25,8 @@ new Promise((resolve, reject) => {
     .on("error", reject);
 })
   .then((data) => {
+    console.log("process");
+
     const obj = {};
     // { [first6]: { [first6]: "bap", [first7]: "ag" } }
 
@@ -59,6 +63,7 @@ new Promise((resolve, reject) => {
           .replace(/INC$/, "")
           .replace(/Ind$/, "")
           .replace(/LLC$/, "")
+          .replace(/ ltd$/, "")
 
           // specific cases
           .replace(/ CH USA$/i, "")
@@ -71,6 +76,8 @@ new Promise((resolve, reject) => {
           .replace(/ COMPUTER$/i, "")
           .replace(/ Inc\./, "")
           .replace(/, a Hewlett Packard Enterprise Company/, "")
+          .replace(/ LLC, a Lenovo Company$/, "")
+          .replace(/ Management Pty$/, "")
 
           .replace(/ Corporate$/i, "")
           .replace(/ Corporation$/i, "")

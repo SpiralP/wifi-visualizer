@@ -119,6 +119,8 @@ impl Handler for Server {
   }
 
   fn on_close(&mut self, _code: CloseCode, _reason: &str) {
+    println!("ws on_close");
+
     if let Some(stop_sniff) = self.stop_sniff.take() {
       stop_sniff.call();
     }
