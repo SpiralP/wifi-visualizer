@@ -71,11 +71,22 @@ function handleFrameEvent(event: FrameEvent) {
     const id = event.data;
     const company = oui(id);
 
-    nodes.update({
-      id,
-      icon: { code: companyToIconCode(company), size: 50 },
-      title: company ? `${htmlEscape(company)}<br />${id}` : id,
-    });
+    // console.log(id);
+    if (id === "98-d6-f7-01-01-00") {
+      console.log("GOT ME!!!!");
+
+      nodes.update({
+        id,
+        icon: { code: companyToIconCode(company), size: 50, color: "#ff00ff" },
+        title: company ? `${htmlEscape(company)}<br />${id}` : id,
+      });
+    } else {
+      nodes.update({
+        id,
+        icon: { code: companyToIconCode(company), size: 50 },
+        title: company ? `${htmlEscape(company)}<br />${id}` : id,
+      });
+    }
   } else if (event.type === "SetKind") {
     const [id, kind] = event.data;
 

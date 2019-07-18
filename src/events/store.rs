@@ -1,8 +1,7 @@
 use super::*;
 use ieee80211::MacAddress;
 use serde_derive::*;
-use std::collections::HashMap;
-use std::collections::HashSet;
+use std::collections::{HashMap, HashSet};
 use time::{get_time, Timespec};
 
 #[derive(Serialize, Debug)]
@@ -38,11 +37,11 @@ pub struct Store {
   kinds: HashMap<MacAddress, Kind>,
   probes: HashMap<MacAddress, HashSet<Vec<u8>>>,
 
-  event_handler: Box<FnMut(Event)>,
+  event_handler: Box<dyn FnMut(Event)>,
 }
 
 impl Store {
-  pub fn new(event_handler: Box<FnMut(Event)>) -> Store {
+  pub fn new(event_handler: Box<dyn FnMut(Event)>) -> Store {
     Store {
       addresses: HashMap::new(),
       connections: HashMap::new(),
@@ -147,9 +146,7 @@ impl Store {
     }
 
     if let Some(ssid_list) = self.probes.get_mut(&mac) {
-      if ssid_list.contains(&ssid) {
-        return;
-      } else {
+      if !ssid_list.contains(&ssid) {
         ssid_list.insert(ssid.clone());
         (self.event_handler)(Event::ProbeRequest(mac, ssid));
       }

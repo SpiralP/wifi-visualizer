@@ -7,7 +7,8 @@
   "scripts": {
     "start": "cargo build --release && sudo ./target/release/wifi-visualizer",
     "watch": "parcel web/index.html",
-    "build": "parcel build web/index.html"
+    "build": "parcel build web/index.html",
+    "setup": "sudo airmon-ng start wlan0 && sudo airodump-ng wlan0mon --channel 6"
   },
   "dependencies": {
     "@fortawesome/fontawesome-free": "^5.6.3",
