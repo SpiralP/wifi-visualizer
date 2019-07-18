@@ -1,6 +1,9 @@
 use crate::error::*;
 use boxfnonce::BoxFnOnce;
-use pcap::{Active, Capture, Device, Error as PcapError, Offline, PacketHeader};
+use pcap::{
+  winapi::um::winbase::STD_INPUT_HANDLE, Active, Capture, Device, Error as PcapError, Offline,
+  PacketHeader,
+};
 use radiotap::Radiotap;
 use std::sync::{mpsc::*, *};
 
@@ -107,6 +110,13 @@ pub fn start_file_capture(
   let cap = get_file_capture(file_path)?;
 
   Ok(start_capture(cap)?)
+}
+
+pub fn start_stdin_capture() -> Result<(Receiver<Status<PacketWithHeader>>, BoxFnOnce<'static, ()>)>
+{
+  let capture = pcap::Capture::from_std_handle(STD_INPUT_HANDLE).unwrap();
+
+  Ok(start_capture(capture)?)
 }
 
 fn strip_radiotap(bytes: &[u8]) -> &[u8] {

@@ -54,6 +54,7 @@ impl Handler for Server {
           start_file_capture(rest.expect("no filename given")).unwrap()
         }
         "live" => start_live_capture(rest).unwrap(),
+        "stdin" => start_stdin_capture().unwrap(),
         _ => {
           return self.out.close(ws::CloseCode::Error);
         }
