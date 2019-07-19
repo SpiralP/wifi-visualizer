@@ -5,7 +5,7 @@
   "author": "SpiralP <spiral.palmer@gmail.com>",
   "license": "MIT",
   "scripts": {
-    "start": "cargo build --release && sudo ./target/release/wifi-visualizer",
+    "start": "cargo build --release && ./target/release/wifi-visualizer",
     "watch": "parcel web/index.html",
     "build": "parcel build web/index.html",
     "setup": "sudo airmon-ng start wlan0 && sudo airodump-ng wlan0mon --channel 6"
@@ -22,6 +22,8 @@
   "devDependencies": {
     "@babel/core": "^7.2.2",
     "@babel/plugin-transform-runtime": "^7.2.0",
+    "@types/jsesc": "^0.4.29",
+    "@types/node": "^12.6.8",
     "@types/vis": "^4.21.9",
     "parcel-bundler": "^1.11.0",
     "typescript": "^3.2.2"

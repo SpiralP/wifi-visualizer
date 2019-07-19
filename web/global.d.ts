@@ -1,14 +1,10 @@
 declare type MacAddress = string;
 declare type ByteArray = number[];
 
-declare interface AccessPointFrameKind {
-  type: "AccessPoint";
-  data: ByteArray;
+declare interface AccessPointInfo {
+  ssid: ByteArray;
+  channel?: number;
 }
-declare interface StationFrameKind {
-  type: "Station";
-}
-declare type FrameKind = AccessPointFrameKind | StationFrameKind;
 
 declare type ConnectionType = "Associated" | "Disassociated" | "InRange";
 
@@ -20,9 +16,9 @@ declare interface NewAddressFrameEvent extends FrameEventPrototype {
   type: "NewAddress";
   data: MacAddress;
 }
-declare interface SetKindFrameEvent extends FrameEventPrototype {
-  type: "SetKind";
-  data: [MacAddress, FrameKind];
+declare interface AccessPointFrameEvent extends FrameEventPrototype {
+  type: "AccessPoint";
+  data: [MacAddress, AccessPointInfo];
 }
 declare interface ConnectionFrameEvent extends FrameEventPrototype {
   type: "Connection";
@@ -39,7 +35,7 @@ declare interface InactiveAddressFrameEvent extends FrameEventPrototype {
 
 declare type FrameEvent =
   | NewAddressFrameEvent
-  | SetKindFrameEvent
+  | AccessPointFrameEvent
   | ConnectionFrameEvent
   | ProbeRequestFrameEvent
   | InactiveAddressFrameEvent;

@@ -91,28 +91,33 @@ pub fn handle_frame(frame: &Frame, store: &mut Store) {
     if let Some(management_frame_layer) = management_frame.next_layer() {
       match management_frame_layer {
         ManagementFrameLayer::Beacon(ref beacon_frame) => {
-          if let Some(ssid) = beacon_frame.ssid() {
-            store.change_kind(
-              transmitter_address.expect("no ta on Beacon"),
-              Kind::AccessPoint(ssid),
-            );
-          }
+          let tagged_parameters = beacon_frame.tagged_parameters();
+
+          store.access_point(
+            transmitter_address.expect("no ta on Beacon"),
+            AccessPointInfo {
+              ssid: tagged_parameters.ssid().unwrap(),
+              channel: tagged_parameters.channel(),
+            },
+          );
         }
 
         ManagementFrameLayer::ProbeResponse(ref probe_response_frame) => {
-          if let Some(ssid) = probe_response_frame.ssid() {
-            store.change_kind(
-              transmitter_address.expect("no ta on ProbeResponse"),
-              Kind::AccessPoint(ssid),
-            );
-          }
+          let tagged_parameters = probe_response_frame.tagged_parameters();
+
+          store.access_point(
+            transmitter_address.expect("no ta on ProbeResponse"),
+            AccessPointInfo {
+              ssid: tagged_parameters.ssid().unwrap(),
+              channel: tagged_parameters.channel(),
+            },
+          );
         }
 
         ManagementFrameLayer::ProbeRequest(ref probe_request_frame) => {
-          if let Some(ssid) = probe_request_frame.ssid() {
-            if !ssid.is_empty() {
-              store.probe_request(transmitter_address.expect("no ta on ProbeRequest"), ssid);
-            }
+          let ssid = probe_request_frame.ssid().unwrap();
+          if !ssid.is_empty() {
+            store.probe_request(transmitter_address.expect("no ta on ProbeRequest"), ssid);
           }
         }
 

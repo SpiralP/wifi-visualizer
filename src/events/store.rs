@@ -9,13 +9,19 @@ use time::{get_time, Timespec};
 pub enum Event {
   NewAddress(MacAddress),
 
-  SetKind(MacAddress, Kind),
+  AccessPoint(MacAddress, AccessPointInfo),
 
   Connection(MacAddress, MacAddress, ConnectionType),
 
-  ProbeRequest(MacAddress, Vec<u8>), // from ssid
+  ProbeRequest(MacAddress, Vec<u8>), // from, ssid
 
   InactiveAddress(Vec<MacAddress>),
+}
+
+#[derive(Serialize, Debug, Clone, PartialEq)]
+pub struct AccessPointInfo {
+  pub ssid: Vec<u8>,
+  pub channel: Option<u8>,
 }
 
 #[derive(Serialize, Debug, Clone, PartialEq)]
@@ -25,16 +31,10 @@ pub enum ConnectionType {
   InRange,
 }
 
-#[derive(Serialize, Debug, Clone, PartialEq)]
-#[serde(tag = "type", content = "data")]
-pub enum Kind {
-  AccessPoint(Vec<u8>), // { type: "SetKind", data: { type: "AccessPoint", data: [0] } }
-}
-
 pub struct Store {
   addresses: HashMap<MacAddress, Timespec>,
   connections: HashMap<String, ConnectionType>,
-  kinds: HashMap<MacAddress, Kind>,
+  access_points: HashMap<MacAddress, AccessPointInfo>,
   probes: HashMap<MacAddress, HashSet<Vec<u8>>>,
 
   event_handler: Box<dyn FnMut(Event)>,
@@ -45,7 +45,7 @@ impl Store {
     Store {
       addresses: HashMap::new(),
       connections: HashMap::new(),
-      kinds: HashMap::new(),
+      access_points: HashMap::new(),
       probes: HashMap::new(),
 
       event_handler,
@@ -88,21 +88,19 @@ impl Store {
     }
   }
 
-  pub fn change_kind(&mut self, mac: MacAddress, kind: Kind) {
+  pub fn access_point(&mut self, mac: MacAddress, info: AccessPointInfo) {
     if is_broadcast(mac) {
       return; // TODO
     } // TODO
 
-    if let Some(old_kind) = self.kinds.get(&mac) {
-      if kind == *old_kind {
-        return;
-      }
+    if self.access_points.contains_key(&mac) {
+      return;
     }
 
     self.add_address(mac);
 
-    self.kinds.insert(mac, kind.clone());
-    (self.event_handler)(Event::SetKind(mac, kind));
+    self.access_points.insert(mac, info.clone());
+    (self.event_handler)(Event::AccessPoint(mac, info));
   }
 
   pub fn change_connection(&mut self, mac1: MacAddress, mac2: MacAddress, kind: ConnectionType) {

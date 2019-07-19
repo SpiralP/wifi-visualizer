@@ -4,7 +4,6 @@ import {
   companyToIconCode,
   connect,
   byteArrayToString,
-  htmlEscape,
 } from "./helpers";
 import copy from "clipboard-copy";
 import oui from "./oui";
@@ -78,26 +77,21 @@ function handleFrameEvent(event: FrameEvent) {
       nodes.update({
         id,
         icon: { code: companyToIconCode(company), size: 50, color: "#ff00ff" },
-        title: company ? `${htmlEscape(company)}<br />${id}` : id,
+        title: company ? `${company}<br />${id}` : id,
       });
     } else {
       nodes.update({
         id,
         icon: { code: companyToIconCode(company), size: 50 },
-        title: company ? `${htmlEscape(company)}<br />${id}` : id,
+        title: company ? `${company}<br />${id}` : id,
       });
     }
-  } else if (event.type === "SetKind") {
-    const [id, kind] = event.data;
+  } else if (event.type === "AccessPoint") {
+    const [id, info] = event.data;
+    const { ssid } = info;
+    const label = byteArrayToString(ssid);
 
-    if (kind.type === "AccessPoint") {
-      const ssid = kind.data;
-      const label = byteArrayToString(ssid);
-
-      nodes.update({ id, icon: { color: "green" }, label });
-    } else if (kind.type === "Station") {
-      // nodes.update({ id, icon: { color: "blue" } });
-    }
+    nodes.update({ id, icon: { color: "green" }, label });
   } else if (event.type === "Connection") {
     const [from, to, kind] = event.data;
     const id = hashMacs(from, to);

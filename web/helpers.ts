@@ -1,4 +1,4 @@
-const jsesc: (input: string) => string = require("jsesc");
+import jsesc from "jsesc";
 
 export function isBroadcast(mac: string): boolean {
   return (parseInt(`${mac[0]}${mac[1]}`, 16) & 0b01) != 0;
@@ -125,11 +125,6 @@ export async function connect(
       resolve();
     };
   });
-}
-
-export function htmlEscape(input: string): string {
-  // TODO
-  return input;
 }
 
 export function byteArrayToString(input: ByteArray): string {
