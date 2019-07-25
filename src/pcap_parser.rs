@@ -1,14 +1,14 @@
 use crate::error::*;
 use boxfnonce::BoxFnOnce;
-use pcap::{
-  winapi::um::winbase::STD_INPUT_HANDLE, Active, Capture, Device, Error as PcapError, Offline,
-  PacketHeader,
-};
+use crossbeam_channel::*;
+use parking_lot::Mutex;
+use pcap::{linktypes, Active, Capture, Device, Error as PcapError, Offline, PacketHeader};
 use radiotap::Radiotap;
-use std::sync::{mpsc::*, *};
-
-const LINKTYPE_IEEE802_11: i32 = 105;
-const LINKTYPE_IEEE802_11_RADIOTAP: i32 = 127;
+#[cfg(unix)]
+use std::os::unix::io::AsRawFd;
+#[cfg(windows)]
+use std::os::windows::io::AsRawHandle;
+use std::{io, sync::Arc};
 
 pub fn get_interface(maybe_search: Option<String>) -> Result<Device> {
   for interface in Device::list().unwrap() {
@@ -114,7 +114,17 @@ pub fn start_file_capture(
 
 pub fn start_stdin_capture() -> Result<(Receiver<Status<PacketWithHeader>>, BoxFnOnce<'static, ()>)>
 {
-  let capture = pcap::Capture::from_std_handle(STD_INPUT_HANDLE).unwrap();
+  let capture = {
+    #[cfg(windows)]
+    {
+      Capture::from_raw_handle(io::stdin().as_raw_handle())?
+    }
+
+    #[cfg(not(windows))]
+    {
+      Capture::from_raw_fd(io::stdin().as_raw_fd())?
+    }
+  };
 
   Ok(start_capture(capture)?)
 }
@@ -181,12 +191,12 @@ fn start_capture<T: ::pcap::Activated + Send + 'static>(
   #[allow(clippy::mutex_atomic)]
   let stop = Arc::new(Mutex::new(false));
 
-  let (sender, receiver) = channel();
+  let (sender, receiver) = unbounded();
 
   let datalink = cap.get_datalink();
   let is_radiotap = match datalink.0 {
-    LINKTYPE_IEEE802_11 => false,
-    LINKTYPE_IEEE802_11_RADIOTAP => true,
+    linktypes::IEEE802_11 => false,
+    linktypes::IEEE802_11_RADIOTAP => true,
     _ => {
       bail!(
         "bad datalink type {}",
@@ -201,7 +211,7 @@ fn start_capture<T: ::pcap::Activated + Send + 'static>(
     let stop = stop.clone();
     std::thread::spawn(move || {
       loop {
-        if *stop.lock().unwrap() {
+        if *stop.lock() {
           break;
         }
         match cap.next() {
@@ -243,7 +253,7 @@ fn start_capture<T: ::pcap::Activated + Send + 'static>(
 
   let stop_thread = BoxFnOnce::from(move || {
     {
-      let mut stop = stop.lock().unwrap();
+      let mut stop = stop.lock();
       *stop = true;
     }
     sniff_thread.join().unwrap();

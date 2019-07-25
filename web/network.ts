@@ -88,10 +88,18 @@ function handleFrameEvent(event: FrameEvent) {
     }
   } else if (event.type === "AccessPoint") {
     const [id, info] = event.data;
-    const { ssid } = info;
+    const { ssid, channel } = info;
     const label = byteArrayToString(ssid);
 
-    nodes.update({ id, icon: { color: "green" }, label });
+    const node = nodes.get(id)!;
+    const lastTitle = node ? node.title : "";
+
+    nodes.update({
+      id,
+      icon: { color: "green" },
+      label,
+      title: `${lastTitle}<br />channel ${channel}`,
+    });
   } else if (event.type === "Connection") {
     const [from, to, kind] = event.data;
     const id = hashMacs(from, to);

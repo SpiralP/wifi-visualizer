@@ -5,8 +5,8 @@ mod test_packets;
 
 use self::{events::*, pcap_parser::*, test_packets::*};
 use boxfnonce::BoxFnOnce;
+use crossbeam_channel::{unbounded, Receiver};
 use ieee80211::*;
-use std::sync::mpsc::Receiver;
 use ws::{listen, CloseCode, Handler, Handshake, Message, Result, Sender};
 
 // Server WebSocket handler
@@ -36,7 +36,7 @@ impl Handler for Server {
     let (receiver, stop_sniff): (Receiver<Status<PacketWithHeader>>, BoxFnOnce<'static, ()>) =
       match root {
         "test" => {
-          let (sender, receiver) = std::sync::mpsc::channel();
+          let (sender, receiver) = unbounded();
           for data in &[&BEACON[..], &PROBE_RESPONSE_RETRY[..], &DATA_FROM_DS[..]] {
             sender
               .send(Status::Active(PacketWithHeader {
@@ -69,7 +69,7 @@ impl Handler for Server {
         let mut store = {
           let out = out.clone();
           Store::new(Box::new(move |event| {
-            println!("{:?}", event);
+            // println!("{:?}", event);
             out.send(serde_json::to_string(&event).unwrap()).unwrap();
           }))
         };

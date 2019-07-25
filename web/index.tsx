@@ -11,4 +11,4 @@ if (module.hot != null) {
 
 // start("stdin");
 // start("live/wlan0mon");
-start("file/caps/miracosta.cap");
+start("file/caps/join_leave.cap");

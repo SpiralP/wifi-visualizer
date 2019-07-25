@@ -121,6 +121,10 @@ pub fn handle_frame(frame: &Frame, store: &mut Store) {
           }
         }
 
+        ManagementFrameLayer::Authentication(ref authentication_frame) => {
+          println!("AUTHENTICATION!!!");
+        }
+
         _ => {}
       }
     }
