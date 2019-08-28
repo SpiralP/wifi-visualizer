@@ -20,3 +20,5 @@ crossbeam-channel = "0.3.9"
 parking_lot = "0.9.0"
 parceljs = { path = "../rust-parceljs" }
 tiny_http = "0.6.2"
+caps = "0.3.3"
+open = "1.3.2"

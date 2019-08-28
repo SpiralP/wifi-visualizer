@@ -11,27 +11,26 @@ const HTTP_SERVER_ADDR: &str = "127.0.0.1:8080";
 const WEBSOCKET_SERVER_ADDR: &str = "127.0.0.1:3012";
 
 fn main() {
+  use caps::{CapSet, Capability};
+
+  if !caps::has_cap(None, CapSet::Permitted, Capability::CAP_NET_RAW).unwrap() {
+    println!("WARNING: CAP_NET_RAW not permitted! live packet capture won't work!");
+    println!(
+      "try running: sudo setcap cap_net_raw+ep {}",
+      std::env::current_exe().unwrap().display()
+    );
+  }
+
   let http_server_thread = thread::spawn(move || {
     http_server::start(HTTP_SERVER_ADDR);
   });
 
-  ws_server::start(WEBSOCKET_SERVER_ADDR);
+  let ws_server_thread = thread::spawn(move || {
+    ws_server::start(WEBSOCKET_SERVER_ADDR);
+  });
 
+  open::that(format!("http://{}/", HTTP_SERVER_ADDR)).unwrap();
+
+  ws_server_thread.join().unwrap();
   http_server_thread.join().unwrap();
-}
-
-#[test]
-#[cfg_attr(target_os = "windows", ignore)]
-fn test_live_frame_parse() {
-  use crate::pcap_parser::*;
-  use ieee80211::*;
-
-  let (receiver, _stop_sniff) = start_live_capture(None).unwrap();
-  let status = receiver.recv().unwrap();
-  if let Status::Active(packet) = status {
-    let frame = Frame::new(&packet.data);
-    println!("{:#?}", frame.receiver_address());
-  } else {
-    panic!("not Status::Active");
-  }
 }

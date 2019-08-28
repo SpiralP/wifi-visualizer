@@ -94,6 +94,22 @@ pub fn start_live_capture(
   Ok(start_capture(cap)?)
 }
 
+#[test]
+#[cfg_attr(target_os = "windows", ignore)]
+fn test_live_frame_parse() {
+  use crate::pcap_parser::*;
+  use ieee80211::*;
+
+  let (receiver, _stop_sniff) = start_live_capture(None).unwrap();
+  let status = receiver.recv().unwrap();
+  if let Status::Active(packet) = status {
+    let frame = Frame::new(&packet.data);
+    println!("{:#?}", frame.receiver_address());
+  } else {
+    panic!("not Status::Active");
+  }
+}
+
 fn get_file_capture(file_path: String) -> Result<Capture<Offline>> {
   Ok(Capture::from_file(file_path)?)
 }
