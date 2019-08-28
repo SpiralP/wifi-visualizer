@@ -100,7 +100,7 @@ export async function connect(
   kind: string,
   callback: (event: FrameEvent) => void
 ) {
-  const ws = new WebSocket(`ws://localhost:3012/${kind}`);
+  const ws = new WebSocket(`ws://localhost:8001/${kind}`);
 
   ws.onmessage = function message(data) {
     const frameEvent: FrameEvent = JSON.parse(data.data);
