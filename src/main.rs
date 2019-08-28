@@ -7,8 +7,8 @@ mod ws_server;
 
 use std::thread;
 
-const HTTP_SERVER_ADDR: &str = "127.0.0.1:8080";
-const WEBSOCKET_SERVER_ADDR: &str = "127.0.0.1:3012";
+const HTTP_SERVER_ADDR: &str = "127.0.0.1:8000";
+const WEBSOCKET_SERVER_ADDR: &str = "127.0.0.1:8001";
 
 fn main() {
   #[cfg(not(windows))]
