@@ -18,6 +18,7 @@ export function setNamedTimeout(
   if (namedTimeouts[name]) {
     clearTimeout(namedTimeouts[name]);
   }
+
   namedTimeouts[name] = setTimeout(callback, time);
 }
 
