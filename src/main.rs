@@ -7,6 +7,7 @@ use self::{events::*, pcap_parser::*, test_packets::*};
 use boxfnonce::BoxFnOnce;
 use crossbeam_channel::{unbounded, Receiver};
 use ieee80211::*;
+use std::thread;
 use ws::{listen, CloseCode, Handler, Handshake, Message, Result, Sender};
 
 // Server WebSocket handler
@@ -127,14 +128,76 @@ impl Handler for Server {
   }
 }
 
+const HTTP_SERVER_ADDR: &str = "127.0.0.1:8080";
+const WEBSOCKET_SERVER_ADDR: &str = "127.0.0.1:3012";
+
 fn main() {
-  println!("websocket starting");
-  if let Err(err) = listen("127.0.0.1:3012", |out| Server {
+  let http_server_thread = thread::spawn(move || {
+    println!("starting http server on {}", HTTP_SERVER_ADDR);
+
+    let server = tiny_http::Server::http(HTTP_SERVER_ADDR).unwrap();
+
+    loop {
+      // blocks until the next request is received
+      match server.recv() {
+        Ok(request) => {
+          println!("{:#?}", request);
+
+          let url = match request.url() {
+            "/" => "index.html",
+            other => &other[1..],
+          };
+
+          match parceljs::get_file(&url) {
+            Ok(data) => {
+              let mut response = tiny_http::Response::from_data(data);
+
+              if url.ends_with(".css") {
+                let header = tiny_http::Header::from_bytes(
+                  &b"Content-Type"[..],
+                  &b"text/css; charset=utf-8"[..],
+                )
+                .unwrap();
+                response.add_header(header);
+              } else if url.ends_with(".js") {
+                let header = tiny_http::Header::from_bytes(
+                  &b"Content-Type"[..],
+                  &b"application/javascript; charset=utf-8"[..],
+                )
+                .unwrap();
+                response.add_header(header);
+              } else if url.ends_with(".html") {
+                let header = tiny_http::Header::from_bytes(
+                  &b"Content-Type"[..],
+                  &b"text/html; charset=utf-8"[..],
+                )
+                .unwrap();
+                response.add_header(header);
+              }
+
+              let _ = request.respond(response);
+            }
+            Err(e) => {
+              println!("{}", e);
+            }
+          }
+        }
+        Err(e) => {
+          println!("error: {}", e);
+          break;
+        }
+      };
+    }
+  });
+
+  println!("starting websocket server on {}", WEBSOCKET_SERVER_ADDR);
+  listen(WEBSOCKET_SERVER_ADDR, |out| Server {
     out,
     stop_sniff: None,
-  }) {
-    println!("listen error: {}", err);
-  }
+  })
+  .unwrap();
+
+  http_server_thread.join().unwrap();
 }
 
 #[test]

@@ -18,3 +18,5 @@ time = "0.1.42"
 ws = "0.8.1"
 crossbeam-channel = "0.3.9"
 parking_lot = "0.9.0"
+parceljs = { path = "../rust-parceljs" }
+tiny_http = "0.6.2"
