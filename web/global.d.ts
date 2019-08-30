@@ -6,7 +6,11 @@ declare interface AccessPointInfo {
   channel?: number;
 }
 
-declare type ConnectionType = "Associated" | "Disassociated" | "InRange";
+declare type ConnectionType =
+  | "Associated"
+  | "Authentication"
+  | "Disassociated"
+  | "InRange";
 
 declare interface FrameEventPrototype {
   type: string;

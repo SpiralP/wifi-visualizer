@@ -28,6 +28,7 @@ pub struct AccessPointInfo {
 #[derive(Serialize, Debug, Clone, PartialEq)]
 pub enum ConnectionType {
   Associated,
+  Authentication,
   Disassociated,
   InRange,
 }
@@ -116,10 +117,10 @@ impl Store {
   }
 
   pub fn change_connection(&mut self, mac1: MacAddress, mac2: MacAddress, kind: ConnectionType) {
-    if is_broadcast(mac1) {
-      return; // TODO
-    } // TODO
-    if is_broadcast(mac2) {
+    self.add_address(mac1); // TODO these go higher level
+    self.add_address(mac2);
+
+    if is_broadcast(mac1) || is_broadcast(mac2) {
       return;
     }
 
@@ -130,21 +131,21 @@ impl Store {
         return;
       }
 
-      if let ConnectionType::InRange = kind {
-        // if we were associated/disassociated that means we were in range!
-
-        match old_kind {
-          ConnectionType::Associated | ConnectionType::Disassociated => {
+      match kind {
+        ConnectionType::Associated => {
+          if let ConnectionType::Authentication = old_kind {
+            // keep Authentication over basic Associated
             return;
           }
-
-          ConnectionType::InRange => {}
         }
+        ConnectionType::InRange => {
+          // if we had a better type that means we were already in range!
+          return;
+        }
+        ConnectionType::Authentication => {}
+        ConnectionType::Disassociated => {}
       }
     }
-
-    self.add_address(mac1);
-    self.add_address(mac2);
 
     self.connections.insert(hash, kind.clone());
     self

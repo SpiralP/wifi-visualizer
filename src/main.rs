@@ -47,7 +47,7 @@ fn main() {
   } else if let Some(interface_name) = matches.value_of("interface") {
     debug!("got interface name {:?}", interface_name);
 
-    #[cfg(not(windows))]
+    #[cfg(target_os = "linux")]
     {
       use caps::{CapSet, Capability};
       use log::warn;

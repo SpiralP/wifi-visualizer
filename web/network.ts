@@ -111,6 +111,14 @@ function handleFrameEvent(event: FrameEvent) {
         from,
         to,
       });
+    } else if (kind === "Authentication") {
+      edges.remove(id);
+      edges.add({
+        id,
+        from,
+        to,
+        color: { color: "green", highlight: "green", hover: "green" },
+      });
     } else if (kind === "Disassociated") {
       edges.remove(id);
       edges.add({
@@ -150,22 +158,20 @@ function handleFrameEvent(event: FrameEvent) {
 
 export default function start() {
   let firstFrame: number;
-  return connect(
-    (data) => {
-      if (!firstFrame) {
-        firstFrame = Date.now();
-      }
-
-      handleFrameEvent(data);
-      // setNamedTimeout(
-      //   "bap",
-      //   () => {
-      //     console.log(`burst took ${Date.now() - 1000 - firstFrame} ms`);
-      //   },
-      //   1000
-      // );
+  return connect((data) => {
+    if (!firstFrame) {
+      firstFrame = Date.now();
     }
-  )
+
+    handleFrameEvent(data);
+    // setNamedTimeout(
+    //   "bap",
+    //   () => {
+    //     console.log(`burst took ${Date.now() - 1000 - firstFrame} ms`);
+    //   },
+    //   1000
+    // );
+  })
     .then(() => {
       console.log("ws done");
     })

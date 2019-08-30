@@ -45,7 +45,11 @@ pub fn handle_frame(store: &mut Store, frame: &Frame) {
           // _Request is from STA
           // _Response is from AP
 
-          is_associated = true;
+          store.change_connection(
+            receiver_address,
+            transmitter_address.expect("no transmitter_address on authentication"),
+            ConnectionType::Authentication,
+          );
         }
 
         ManagementSubtype::Disassociate | ManagementSubtype::Deauthentication => {
