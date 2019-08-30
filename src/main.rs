@@ -1,39 +1,93 @@
 mod error;
 mod events;
 mod http_server;
-mod pcap_parser;
-mod test_packets;
+mod logger;
+mod packet_capture;
 mod ws_server;
 
+use self::{
+  events::Store,
+  packet_capture::{get_capture, CaptureType},
+};
+use clap::{clap_app, crate_name, crate_version};
+use log::debug;
 use std::thread;
 
 const HTTP_SERVER_ADDR: &str = "127.0.0.1:8000";
 const WEBSOCKET_SERVER_ADDR: &str = "127.0.0.1:8001";
 
 fn main() {
-  #[cfg(not(windows))]
-  {
-    use caps::{CapSet, Capability};
+  let matches = clap_app!(app =>
+      (name: crate_name!())
+      (version: crate_version!())
 
-    if !caps::has_cap(None, CapSet::Permitted, Capability::CAP_NET_RAW).unwrap() {
-      println!("WARNING: CAP_NET_RAW not permitted! live packet capture won't work!");
-      println!(
-        "try running: sudo setcap cap_net_raw+ep {}",
-        std::env::current_exe().unwrap().display()
-      );
+      (@arg debug: -v --verbose --debug "Show debug messages")
+
+      (@arg input_file: conflicts_with[interface] -f --file [FILE] +required "File to read from")
+      (@arg interface: conflicts_with[input_file] -i --interface [INTERFACE] +required "Interface to capture packets from")
+  )
+  .get_matches();
+
+  #[cfg(debug_assertions)]
+  logger::initialize(true);
+
+  #[cfg(not(debug_assertions))]
+  logger::initialize(matches.is_present("debug"));
+
+  let mut sleep_playback = false;
+  let capture_type = if let Some(input_file) = matches.value_of("input_file") {
+    debug!("got input file {:?}", input_file);
+
+    if input_file == "-" {
+      CaptureType::Stdin
+    } else {
+      sleep_playback = true;
+      CaptureType::File(input_file.to_string())
     }
-  }
+  } else if let Some(interface_name) = matches.value_of("interface") {
+    debug!("got interface name {:?}", interface_name);
+
+    #[cfg(not(windows))]
+    {
+      use caps::{CapSet, Capability};
+      use log::warn;
+
+      if !caps::has_cap(None, CapSet::Permitted, Capability::CAP_NET_RAW).unwrap() {
+        warn!("WARNING: CAP_NET_RAW not permitted! live packet capture won't work!");
+        warn!(
+          "try running: sudo setcap cap_net_raw+ep {}",
+          std::env::current_exe().unwrap().display()
+        );
+      }
+    }
+
+    CaptureType::Interface(interface_name.to_string())
+  } else {
+    unreachable!()
+  };
+
+  let mut store = Store::new();
+  let event_receiver = store.get_receiver().unwrap();
+
+  let packet_capture_thread = thread::spawn(move || {
+    let capture = get_capture(capture_type).unwrap();
+
+    packet_capture::start_blocking(capture, store, sleep_playback).unwrap();
+  });
 
   let http_server_thread = thread::spawn(move || {
-    http_server::start(HTTP_SERVER_ADDR);
+    http_server::start_blocking(HTTP_SERVER_ADDR);
   });
 
   let ws_server_thread = thread::spawn(move || {
-    ws_server::start(WEBSOCKET_SERVER_ADDR);
+    ws_server::start_blocking(WEBSOCKET_SERVER_ADDR, event_receiver).unwrap();
   });
+
+  // TODO wait until packet capture begins successfully
 
   open::that(format!("http://{}/", HTTP_SERVER_ADDR)).unwrap();
 
-  ws_server_thread.join().unwrap();
   http_server_thread.join().unwrap();
+  ws_server_thread.join().unwrap();
+  packet_capture_thread.join().unwrap();
 }

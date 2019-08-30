@@ -96,11 +96,8 @@ export function companyToIconCode(company?: string) {
   return iconNameToCode.circle;
 }
 
-export async function connect(
-  kind: string,
-  callback: (event: FrameEvent) => void
-) {
-  const ws = new WebSocket(`ws://localhost:8001/${kind}`);
+export async function connect(callback: (event: FrameEvent) => void) {
+  const ws = new WebSocket(`ws://localhost:8001/`);
 
   ws.onmessage = function message(data) {
     const frameEvent: FrameEvent = JSON.parse(data.data);

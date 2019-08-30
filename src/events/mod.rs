@@ -4,7 +4,7 @@ mod util;
 pub use self::{store::*, util::*};
 use ieee80211::*;
 
-pub fn handle_frame(frame: &Frame, store: &mut Store) {
+pub fn handle_frame(store: &mut Store, frame: &Frame) {
   let receiver_address = frame.receiver_address();
   store.add_address(receiver_address);
 

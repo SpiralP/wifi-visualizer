@@ -148,10 +148,9 @@ function handleFrameEvent(event: FrameEvent) {
   }
 }
 
-export default function start(ifname: string = "live/wlan0mon") {
+export default function start() {
   let firstFrame: number;
   return connect(
-    ifname,
     (data) => {
       if (!firstFrame) {
         firstFrame = Date.now();
