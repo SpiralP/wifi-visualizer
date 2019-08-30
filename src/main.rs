@@ -69,25 +69,25 @@ fn main() {
   let mut store = Store::new();
   let event_receiver = store.get_receiver().unwrap();
 
-  let packet_capture_thread = thread::spawn(move || {
-    let capture = get_capture(capture_type).unwrap();
-
-    packet_capture::start_blocking(capture, store, sleep_playback).unwrap();
+  let ws_server_thread = thread::spawn(move || {
+    ws_server::start_blocking(WEBSOCKET_SERVER_ADDR, event_receiver).unwrap();
   });
 
   let http_server_thread = thread::spawn(move || {
     http_server::start_blocking(HTTP_SERVER_ADDR);
   });
 
-  let ws_server_thread = thread::spawn(move || {
-    ws_server::start_blocking(WEBSOCKET_SERVER_ADDR, event_receiver).unwrap();
+  let packet_capture_thread = thread::spawn(move || {
+    let capture = get_capture(capture_type).unwrap();
+
+    packet_capture::start_blocking(capture, store, sleep_playback).unwrap();
   });
 
   // TODO wait until packet capture begins successfully
 
   open::that(format!("http://{}/", HTTP_SERVER_ADDR)).unwrap();
 
-  http_server_thread.join().unwrap();
   ws_server_thread.join().unwrap();
+  http_server_thread.join().unwrap();
   packet_capture_thread.join().unwrap();
 }

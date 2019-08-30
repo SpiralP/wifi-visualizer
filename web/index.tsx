@@ -9,4 +9,6 @@ if (module.hot != null) {
   });
 }
 
-start();
+setTimeout(() => {
+  start();
+}, 0);

@@ -1,6 +1,6 @@
 use crate::events::Event;
 use crossbeam_channel::*;
-use log::debug;
+use log::{debug, info};
 use std::{process, thread};
 use ws::{listen, CloseCode, Handler, Handshake, Message, Result};
 
@@ -25,7 +25,7 @@ impl Handler for Server {
         sender.send(serde_json::to_string(&event).unwrap()).unwrap();
       }
 
-      debug!("ws event loop done");
+      info!("event loop done");
 
       process::exit(0);
     });
