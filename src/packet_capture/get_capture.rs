@@ -1,4 +1,5 @@
 use crate::error::*;
+use failure::bail;
 use pcap::{Active, Capture, Device, Offline};
 #[cfg(unix)]
 use std::os::unix::io::AsRawFd;
@@ -7,13 +8,13 @@ use std::os::windows::io::AsRawHandle;
 use std::{io, path::Path};
 
 pub fn get_interface(search: String) -> Result<Device> {
-  for interface in Device::list().unwrap() {
+  for interface in Device::list()? {
     if interface.name == search {
       return Ok(interface);
     }
   }
 
-  Err("No interface found".into())
+  bail!("No interface found")
 }
 
 pub fn get_live_capture(dev: Device) -> Result<Capture<Active>> {

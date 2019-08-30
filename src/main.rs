@@ -5,7 +5,8 @@ mod logger;
 mod packet_capture;
 mod ws_server;
 
-use self::{
+use crate::{
+  error::*,
   events::Store,
   packet_capture::{get_capture, CaptureType},
 };
@@ -16,7 +17,7 @@ use std::thread;
 const HTTP_SERVER_ADDR: &str = "127.0.0.1:8000";
 const WEBSOCKET_SERVER_ADDR: &str = "127.0.0.1:8001";
 
-fn main() {
+fn main() -> Result<()> {
   let matches = clap_app!(app =>
       (name: crate_name!())
       (version: crate_version!())
@@ -51,12 +52,13 @@ fn main() {
     {
       use caps::{CapSet, Capability};
       use log::warn;
+      use std::env;
 
       if !caps::has_cap(None, CapSet::Permitted, Capability::CAP_NET_RAW).unwrap() {
         warn!("WARNING: CAP_NET_RAW not permitted! live packet capture won't work!");
         warn!(
           "try running: sudo setcap cap_net_raw+ep {}",
-          std::env::current_exe().unwrap().display()
+          env::current_exe()?.display()
         );
       }
     }
@@ -85,9 +87,11 @@ fn main() {
 
   // TODO wait until packet capture begins successfully
 
-  open::that(format!("http://{}/", HTTP_SERVER_ADDR)).unwrap();
+  open::that(format!("http://{}/", HTTP_SERVER_ADDR))?;
 
   ws_server_thread.join().unwrap();
   http_server_thread.join().unwrap();
   packet_capture_thread.join().unwrap();
+
+  Ok(())
 }
