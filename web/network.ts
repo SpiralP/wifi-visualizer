@@ -4,6 +4,7 @@ import {
   companyToIconCode,
   connect,
   byteArrayToString,
+  status,
 } from "./helpers";
 import copy from "clipboard-copy";
 import oui from "./oui";
@@ -51,9 +52,9 @@ network.moveTo({ scale: 0.4 });
 
 network.on("click", (event: { nodes: Array<string>; edges: Array<string> }) => {
   if (event.nodes.length === 1) {
-    console.log(event);
-    copy(event.nodes[0])
-      .then(() => console.log("copied"))
+    const addr = event.nodes[0];
+    copy(addr)
+      .then(() => console.log(`copied ${addr}`))
       .catch(() => console.warn("failed to copy"));
   }
 });
@@ -160,6 +161,7 @@ export default function start() {
   let firstFrame: number;
   return connect((data) => {
     if (!firstFrame) {
+      status("running");
       firstFrame = Date.now();
     }
 
@@ -173,7 +175,7 @@ export default function start() {
     // );
   })
     .then(() => {
-      console.log("ws done");
+      status("ws done");
     })
     .catch((e) => console.warn(e));
 }

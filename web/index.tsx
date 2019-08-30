@@ -1,4 +1,5 @@
 import start from "./network";
+import { status } from "./helpers";
 
 // @ts-ignore
 if (module.hot != null) {
@@ -9,6 +10,9 @@ if (module.hot != null) {
   });
 }
 
+status("index.tsx");
+
 setTimeout(() => {
+  status("starting");
   start();
-}, 0);
+}, 1000);

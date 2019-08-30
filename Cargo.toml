@@ -6,8 +6,8 @@ edition = "2018"
 
 [dependencies]
 byteorder = "1.3.2"
-ieee80211 = { path = "../rust-ieee80211", features = ["serde"] }
-pcap = { path = "../rust-pcap" }
+ieee80211 = { git = "https://github.com/SpiralP/rust-ieee80211.git", features = ["serde"] }
+pcap = { git = "https://github.com/SpiralP/rust-pcap.git" }
 radiotap = "1.3.0"
 serde = "1.0.97"
 serde_derive = "1.0.97"

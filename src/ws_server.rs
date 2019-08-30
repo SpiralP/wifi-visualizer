@@ -27,7 +27,7 @@ impl Handler for Server {
 
       info!("event loop done");
 
-      process::exit(0);
+      sender.close(ws::CloseCode::Normal).unwrap();
     });
 
     Ok(()) // don't close yet

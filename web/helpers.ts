@@ -128,3 +128,8 @@ export async function connect(callback: (event: FrameEvent) => void) {
 export function byteArrayToString(input: ByteArray): string {
   return jsesc(Buffer.from(input).toString());
 }
+
+export function status(text: string) {
+  console.log(text);
+  document.title = text;
+}

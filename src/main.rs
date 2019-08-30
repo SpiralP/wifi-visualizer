@@ -23,6 +23,7 @@ fn main() -> Result<()> {
       (version: crate_version!())
 
       (@arg debug: -v --verbose --debug "Show debug messages")
+      (@arg no_browser: -n --("no-browser") "Don't open browser")
 
       (@arg input_file: conflicts_with[interface] -f --file [FILE] +required "File to read from")
       (@arg interface: conflicts_with[input_file] -i --interface [INTERFACE] +required "Interface to capture packets from")
@@ -86,8 +87,14 @@ fn main() -> Result<()> {
   });
 
   // TODO wait until packet capture begins successfully
+  let no_browser = matches.is_present("no_browser");
 
-  open::that(format!("http://{}/", HTTP_SERVER_ADDR))?;
+  if !no_browser {
+    use std::time;
+
+    thread::sleep(time::Duration::from_millis(100));
+    open::that(format!("http://{}/", HTTP_SERVER_ADDR))?;
+  }
 
   ws_server_thread.join().unwrap();
   http_server_thread.join().unwrap();
