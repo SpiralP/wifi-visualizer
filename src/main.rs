@@ -12,7 +12,11 @@ use crate::{
 };
 use clap::{clap_app, crate_name, crate_version};
 use log::debug;
-use std::thread;
+use std::{
+  sync::{atomic::AtomicBool, Arc},
+  thread,
+  time::Duration,
+};
 
 const HTTP_SERVER_ADDR: &str = "127.0.0.1:8000";
 const WEBSOCKET_SERVER_ADDR: &str = "127.0.0.1:8001";
@@ -72,28 +76,54 @@ fn main() -> Result<()> {
   let mut store = Store::new();
   let event_receiver = store.get_receiver().unwrap();
 
-  let ws_server_thread = thread::spawn(move || {
-    ws_server::start_blocking(WEBSOCKET_SERVER_ADDR, event_receiver).unwrap();
-  });
+  let stop_notify = Arc::new(AtomicBool::new(false));
 
-  let http_server_thread = thread::spawn(move || {
-    http_server::start_blocking(HTTP_SERVER_ADDR);
-  });
+  let ws_server_thread = {
+    let stop_notify = stop_notify.clone();
 
-  let packet_capture_thread = thread::spawn(move || {
-    let capture = get_capture(capture_type).unwrap();
+    thread::Builder::new()
+      .name("ws_server_thread".into())
+      .spawn(move || {
+        ws_server::start_blocking(WEBSOCKET_SERVER_ADDR, event_receiver, stop_notify).unwrap();
+      })
+      .unwrap()
+  };
 
-    packet_capture::start_blocking(capture, store, sleep_playback).unwrap();
-  });
+  let http_server_thread = {
+    let stop_notify = stop_notify.clone();
 
-  // TODO wait until packet capture begins successfully
+    thread::Builder::new()
+      .name("http_server_thread".into())
+      .spawn(move || {
+        http_server::start_blocking(HTTP_SERVER_ADDR, stop_notify);
+      })
+      .unwrap()
+  };
+
+  let packet_capture_thread = {
+    let stop_notify = stop_notify.clone();
+
+    thread::Builder::new()
+      .name("packet_capture_thread".into())
+      .spawn(move || {
+        let capture = get_capture(capture_type).unwrap();
+
+        packet_capture::start_blocking(capture, store, sleep_playback, stop_notify).unwrap();
+      })
+      .unwrap()
+  };
+
+  // TODO wait until packet capture begins successfully?
   let no_browser = matches.is_present("no_browser");
 
   if !no_browser {
-    use std::time;
-
-    thread::sleep(time::Duration::from_millis(100));
-    open::that(format!("http://{}/", HTTP_SERVER_ADDR))?;
+    thread::Builder::new()
+      .name("open http thread".into())
+      .spawn(move || {
+        thread::sleep(Duration::from_millis(100));
+        open::that(format!("http://{}/", HTTP_SERVER_ADDR)).unwrap();
+      })
+      .unwrap();
   }
 
   ws_server_thread.join().unwrap();

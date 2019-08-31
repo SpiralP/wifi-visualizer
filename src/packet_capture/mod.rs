@@ -10,7 +10,14 @@ use failure::bail;
 use ieee80211::Frame;
 use log::debug;
 use pcap::{linktypes, Activated, Capture, Error as PcapError};
-use std::{thread, time::Duration};
+use std::{
+  sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+  },
+  thread,
+  time::Duration,
+};
 
 pub enum CaptureType {
   Stdin,
@@ -33,6 +40,7 @@ pub fn start_blocking(
   mut capture: Capture<dyn Activated>,
   mut store: Store,
   sleep_playback: bool,
+  stop_notify: Arc<AtomicBool>,
 ) -> Result<()> {
   let mut maybe_last_time: Option<Duration> = None;
 
@@ -51,6 +59,10 @@ pub fn start_blocking(
   };
 
   loop {
+    if stop_notify.load(Ordering::SeqCst) {
+      break;
+    }
+
     match capture.next() {
       Err(ref err) => match err {
         PcapError::NoMorePackets => break,

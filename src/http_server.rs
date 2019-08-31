@@ -1,15 +1,30 @@
 use log::{debug, error, info};
+use std::{
+  sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+  },
+  time::Duration,
+};
 use tiny_http::{Header, Response, Server};
 
-pub fn start_blocking(addr: &str) {
+pub fn start_blocking(addr: &str, stop_notify: Arc<AtomicBool>) {
   info!("starting http server on http://{}/", addr);
 
   let server = Server::http(addr).unwrap();
 
   loop {
+    if stop_notify.load(Ordering::SeqCst) {
+      break;
+    }
+
     // blocks until the next request is received
-    match server.recv() {
-      Ok(request) => {
+    match server.recv_timeout(Duration::from_millis(1000)) {
+      Ok(None) => {
+        // timeout hit
+      }
+
+      Ok(Some(request)) => {
         debug!("{:#?}", request);
 
         let url = request.url();
@@ -32,6 +47,7 @@ pub fn start_blocking(addr: &str) {
           }
         }
       }
+
       Err(e) => {
         error!("http server error: {}", e);
         break;

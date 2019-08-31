@@ -175,7 +175,9 @@ export default function start() {
     // );
   })
     .then(() => {
-      status("ws done");
+      status("websocket closed");
     })
-    .catch((e) => console.warn(e));
+    .catch((e) => {
+      status("" + e);
+    });
 }

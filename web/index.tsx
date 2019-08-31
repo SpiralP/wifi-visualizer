@@ -15,4 +15,4 @@ status("index.tsx");
 setTimeout(() => {
   status("starting");
   start();
-}, 1000);
+}, 10);

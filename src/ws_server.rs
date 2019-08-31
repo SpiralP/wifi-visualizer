@@ -1,34 +1,50 @@
 use crate::events::Event;
 use crossbeam_channel::*;
 use log::{debug, info};
-use std::{process, thread};
-use ws::{listen, CloseCode, Handler, Handshake, Message, Result};
+use std::{
+  sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+  },
+  thread,
+};
+use ws::{Builder, CloseCode, Handler, Handshake, Message, Result, Sender, Settings};
 
 // Server WebSocket handler
 struct Server {
-  sender: Option<ws::Sender>,
+  sender: ws::Sender,
   event_receiver: Option<Receiver<Event>>,
+  stop_notify: Arc<AtomicBool>,
 }
 
 impl Handler for Server {
   fn on_open(&mut self, _shake: Handshake) -> Result<()> {
     debug!("ws on_open");
 
-    // self.stop_sniff =
-    //   Some(packet_capture::start(self.capture.take().unwrap(), self.sender.clone()).unwrap());
-
     let event_receiver = self.event_receiver.take().unwrap();
-    let sender = self.sender.take().unwrap();
+    let sender = self.sender.clone();
+    let stop_notify = self.stop_notify.clone();
 
-    thread::spawn(move || {
-      for event in event_receiver {
-        sender.send(serde_json::to_string(&event).unwrap()).unwrap();
-      }
+    thread::Builder::new()
+      .name("event_receiver_thread".into())
+      .spawn(move || {
+        for event in event_receiver {
+          if stop_notify.load(Ordering::SeqCst) {
+            return;
+          }
 
-      info!("event loop done");
+          sender.send(serde_json::to_string(&event).unwrap()).unwrap();
+        }
 
-      sender.close(ws::CloseCode::Normal).unwrap();
-    });
+        info!("event loop done");
+
+        if stop_notify.load(Ordering::SeqCst) {
+          return;
+        }
+
+        sender.close(CloseCode::Normal).unwrap();
+      })
+      .unwrap();
 
     Ok(()) // don't close yet
   }
@@ -42,23 +58,34 @@ impl Handler for Server {
   fn on_close(&mut self, _code: CloseCode, _reason: &str) {
     debug!("ws on_close");
 
-    process::exit(0);
+    info!("websocket closed");
+    self.sender.shutdown().unwrap();
 
-    // if let Some(stop_sniff) = self.stop_sniff.take() {
-    //   stop_sniff.call();
-    // }
+    self.stop_notify.store(true, Ordering::SeqCst);
   }
 }
 
-pub fn start_blocking(addr: &str, event_receiver: Receiver<Event>) -> Result<()> {
+pub fn start_blocking(
+  addr: &str,
+  event_receiver: Receiver<Event>,
+  stop_notify: Arc<AtomicBool>,
+) -> Result<()> {
   debug!("starting websocket server on {}", addr);
 
   let mut event_receiver = Some(event_receiver);
+  let mut stop_notify = Some(stop_notify);
 
-  listen(addr, |sender| Server {
-    sender: Some(sender),
-    event_receiver: Some(event_receiver.take().unwrap()),
-  })?;
+  Builder::new()
+    .with_settings(Settings {
+      max_connections: 1,
+      ..Settings::default()
+    })
+    .build(move |sender: Sender| Server {
+      sender,
+      event_receiver: Some(event_receiver.take().unwrap()),
+      stop_notify: stop_notify.take().unwrap(),
+    })?
+    .listen(addr)?;
 
   Ok(())
 }
