@@ -1,4 +1,5 @@
-use log::{debug, error, info};
+use crate::error::*;
+use log::{debug, info};
 use std::{
   sync::{
     atomic::{AtomicBool, Ordering},
@@ -8,10 +9,10 @@ use std::{
 };
 use tiny_http::{Header, Response, Server};
 
-pub fn start_blocking(addr: &str, stop_notify: Arc<AtomicBool>) {
+pub fn start_blocking(addr: &str, stop_notify: Arc<AtomicBool>) -> Result<()> {
   info!("starting http server on http://{}/", addr);
 
-  let server = Server::http(addr).unwrap();
+  let server = Server::http(addr).map_err(Error::from_boxed_compat)?;
 
   loop {
     if stop_notify.load(Ordering::SeqCst) {
@@ -19,39 +20,31 @@ pub fn start_blocking(addr: &str, stop_notify: Arc<AtomicBool>) {
     }
 
     // blocks until the next request is received
-    match server.recv_timeout(Duration::from_millis(1000)) {
-      Ok(None) => {
-        // timeout hit
-      }
+    if let Some(request) = server.recv_timeout(Duration::from_millis(1000))? {
+      debug!("{:#?}", request);
 
-      Ok(Some(request)) => {
-        debug!("{:#?}", request);
+      let url = request.url();
 
-        let url = request.url();
+      match parceljs::get_file(&url) {
+        Ok(data) => {
+          let mut response = Response::from_data(data);
 
-        match parceljs::get_file(&url) {
-          Ok(data) => {
-            let mut response = Response::from_data(data);
-
-            if let Some(content_type) = parceljs::get_content_type(&url) {
-              let header = Header::from_bytes(&b"Content-Type"[..], content_type).unwrap();
-              response.add_header(header);
-            }
-
-            let _ = request.respond(response);
+          if let Some(content_type) = parceljs::get_content_type(&url) {
+            let header = Header::from_bytes(&b"Content-Type"[..], content_type)
+              .map_err(|_| err_msg("couldn't convert content-type"))?;
+            response.add_header(header);
           }
-          Err(_) => {
-            let response = Response::empty(404);
 
-            let _ = request.respond(response);
-          }
+          let _ = request.respond(response);
+        }
+        Err(_) => {
+          let response = Response::empty(404);
+
+          let _ = request.respond(response);
         }
       }
-
-      Err(e) => {
-        error!("http server error: {}", e);
-        break;
-      }
-    };
+    }
   }
+
+  Ok(())
 }

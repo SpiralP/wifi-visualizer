@@ -1,3 +1,5 @@
+#![allow(clippy::needless_return)]
+
 mod error;
 mod events;
 mod http_server;
@@ -11,15 +13,32 @@ use crate::{
   packet_capture::{get_capture, CaptureType},
 };
 use clap::{clap_app, crate_name, crate_version};
-use log::debug;
+use log::{debug, error};
 use std::{
-  sync::{atomic::AtomicBool, Arc},
+  sync::{
+    atomic::{AtomicBool, Ordering},
+    Arc,
+  },
   thread,
   time::Duration,
 };
 
 const HTTP_SERVER_ADDR: &str = "127.0.0.1:8000";
 const WEBSOCKET_SERVER_ADDR: &str = "127.0.0.1:8001";
+
+macro_rules! check_fail {
+  ($x:expr, $stop_notify:expr) => {
+    match $x {
+      Err(err) => {
+        $stop_notify.store(true, Ordering::SeqCst);
+        error!("{}", err);
+        return;
+      }
+
+      Ok(ret) => ret,
+    }
+  };
+}
 
 fn main() -> Result<()> {
   let matches = clap_app!(app =>
@@ -84,7 +103,10 @@ fn main() -> Result<()> {
     thread::Builder::new()
       .name("ws_server_thread".into())
       .spawn(move || {
-        ws_server::start_blocking(WEBSOCKET_SERVER_ADDR, event_receiver, stop_notify).unwrap();
+        check_fail!(
+          ws_server::start_blocking(WEBSOCKET_SERVER_ADDR, event_receiver, stop_notify.clone()),
+          stop_notify
+        );
       })
       .unwrap()
   };
@@ -95,7 +117,10 @@ fn main() -> Result<()> {
     thread::Builder::new()
       .name("http_server_thread".into())
       .spawn(move || {
-        http_server::start_blocking(HTTP_SERVER_ADDR, stop_notify);
+        check_fail!(
+          http_server::start_blocking(HTTP_SERVER_ADDR, stop_notify.clone()),
+          stop_notify
+        );
       })
       .unwrap()
   };
@@ -106,9 +131,11 @@ fn main() -> Result<()> {
     thread::Builder::new()
       .name("packet_capture_thread".into())
       .spawn(move || {
-        let capture = get_capture(capture_type).unwrap();
-
-        packet_capture::start_blocking(capture, store, sleep_playback, stop_notify).unwrap();
+        let capture = check_fail!(get_capture(capture_type), stop_notify);
+        check_fail!(
+          packet_capture::start_blocking(capture, store, sleep_playback, stop_notify.clone()),
+          stop_notify
+        );
       })
       .unwrap()
   };
@@ -121,6 +148,11 @@ fn main() -> Result<()> {
       .name("open http thread".into())
       .spawn(move || {
         thread::sleep(Duration::from_millis(100));
+
+        if stop_notify.load(Ordering::SeqCst) {
+          return;
+        }
+
         open::that(format!("http://{}/", HTTP_SERVER_ADDR)).unwrap();
       })
       .unwrap();

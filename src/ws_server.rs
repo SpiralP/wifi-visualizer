@@ -7,6 +7,7 @@ use std::{
     Arc,
   },
   thread,
+  time::Duration,
 };
 use ws::{Builder, CloseCode, Handler, Handshake, Message, Result, Sender, Settings};
 
@@ -38,11 +39,7 @@ impl Handler for Server {
 
         info!("event loop done");
 
-        if stop_notify.load(Ordering::SeqCst) {
-          return;
-        }
-
-        sender.close(CloseCode::Normal).unwrap();
+        let _ = sender.close(CloseCode::Normal);
       })
       .unwrap();
 
@@ -59,7 +56,7 @@ impl Handler for Server {
     debug!("ws on_close");
 
     info!("websocket closed");
-    self.sender.shutdown().unwrap();
+    let _ = self.sender.shutdown();
 
     self.stop_notify.store(true, Ordering::SeqCst);
   }
@@ -72,20 +69,34 @@ pub fn start_blocking(
 ) -> Result<()> {
   debug!("starting websocket server on {}", addr);
 
-  let mut event_receiver = Some(event_receiver);
-  let mut stop_notify = Some(stop_notify);
+  let websocket = {
+    let mut event_receiver = Some(event_receiver);
+    let mut stop_notify = Some(stop_notify.clone());
 
-  Builder::new()
-    .with_settings(Settings {
-      max_connections: 1,
-      ..Settings::default()
-    })
-    .build(move |sender: Sender| Server {
-      sender,
-      event_receiver: Some(event_receiver.take().unwrap()),
-      stop_notify: stop_notify.take().unwrap(),
-    })?
-    .listen(addr)?;
+    Builder::new()
+      .with_settings(Settings {
+        max_connections: 1,
+        ..Settings::default()
+      })
+      .build(move |sender: Sender| Server {
+        sender,
+        event_receiver: Some(event_receiver.take().unwrap()),
+        stop_notify: stop_notify.take().unwrap(),
+      })?
+  };
+
+  let broadcaster = websocket.broadcaster();
+
+  thread::spawn(move || loop {
+    thread::sleep(Duration::from_millis(100));
+
+    if stop_notify.load(Ordering::SeqCst) {
+      let _ = broadcaster.shutdown();
+      break;
+    }
+  });
+
+  websocket.listen(addr)?;
 
   Ok(())
 }
