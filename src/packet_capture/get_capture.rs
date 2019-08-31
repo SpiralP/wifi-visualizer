@@ -1,5 +1,5 @@
 use crate::error::*;
-use failure::bail;
+use log::info;
 use pcap::{Active, Capture, Device, Offline};
 #[cfg(unix)]
 use std::os::unix::io::AsRawFd;
@@ -18,7 +18,7 @@ pub fn get_interface(search: String) -> Result<Device> {
 }
 
 pub fn get_live_capture(dev: Device) -> Result<Capture<Active>> {
-  println!("listening on {}", dev.name);
+  info!("listening on {}", dev.name);
 
   Ok(
     Capture::from_device(dev)?

@@ -6,7 +6,6 @@ use crate::{
   error::*,
   events::{handle_frame, store::Store},
 };
-use failure::bail;
 use ieee80211::Frame;
 use log::debug;
 use pcap::{linktypes, Activated, Capture, Error as PcapError};
