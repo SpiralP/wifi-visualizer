@@ -1,3 +1,4 @@
+#![warn(clippy::pedantic)]
 #![allow(clippy::needless_return)]
 
 mod error;
@@ -82,7 +83,7 @@ fn main() -> Result<()> {
 
     thread::spawn("ws_server_thread", move || {
       check_err_return!(
-        ws_server::start_blocking(WEBSOCKET_SERVER_ADDR, event_receiver, stop_notify.clone()),
+        ws_server::start_blocking(WEBSOCKET_SERVER_ADDR, event_receiver, &mut stop_notify),
         stop_notify
       );
     })
@@ -93,7 +94,7 @@ fn main() -> Result<()> {
 
     thread::spawn("http_server_thread", move || {
       check_err_return!(
-        http_server::start_blocking(HTTP_SERVER_ADDR, stop_notify.clone()),
+        http_server::start_blocking(HTTP_SERVER_ADDR, &stop_notify),
         stop_notify
       );
     })
@@ -105,7 +106,7 @@ fn main() -> Result<()> {
     thread::spawn("packet_capture_thread", move || {
       let capture = check_err_return!(get_capture(capture_type), stop_notify);
       check_err_return!(
-        packet_capture::start_blocking(capture, store, sleep_playback, stop_notify.clone()),
+        packet_capture::start_blocking(capture, store, sleep_playback, &stop_notify),
         stop_notify
       );
     })

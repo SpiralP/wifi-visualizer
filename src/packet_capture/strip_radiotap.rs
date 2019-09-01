@@ -4,7 +4,7 @@ pub fn strip_radiotap(bytes: &[u8]) -> &[u8] {
   let (radiotap, rest) = Radiotap::parse(bytes).unwrap();
   // println!("{:#?}", element);
 
-  let has_fcs = radiotap.flags.map(|flags| flags.fcs).unwrap_or(false);
+  let has_fcs = radiotap.flags.map_or(false, |flags| flags.fcs);
 
   if has_fcs {
     // remove last 4 bytes (uint32_t)

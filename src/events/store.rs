@@ -44,10 +44,10 @@ pub struct Store {
 }
 
 impl Store {
-  pub fn new() -> Store {
+  pub fn new() -> Self {
     let (sender, receiver) = unbounded();
 
-    Store {
+    Self {
       addresses: HashMap::new(),
       connections: HashMap::new(),
       access_points: HashMap::new(),
@@ -93,10 +93,10 @@ impl Store {
 
     let now = get_time();
 
-    let new = self.addresses.get(&mac).is_none();
+    let is_new_addr = self.addresses.get(&mac).is_none();
 
     self.addresses.insert(mac, now);
-    if new {
+    if is_new_addr {
       self.sender.send(Event::NewAddress(mac)).unwrap();
     }
   }
@@ -142,8 +142,7 @@ impl Store {
           // if we had a better type that means we were already in range!
           return;
         }
-        ConnectionType::Authentication => {}
-        ConnectionType::Disassociated => {}
+        ConnectionType::Authentication | ConnectionType::Disassociated => {}
       }
     }
 

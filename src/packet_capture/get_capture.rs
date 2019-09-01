@@ -7,7 +7,7 @@ use std::os::unix::io::AsRawFd;
 use std::os::windows::io::AsRawHandle;
 use std::{io, path::Path};
 
-pub fn get_interface(search: String) -> Result<Device> {
+pub fn get_interface(search: &str) -> Result<Device> {
   for interface in Device::list()? {
     if interface.name == search {
       return Ok(interface);
@@ -65,20 +65,19 @@ fn test_live_capture() {
   #[cfg(not(windows))]
   let iface = "mon0".to_string();
 
-  let mut cap = get_live_capture(get_interface(iface).unwrap()).unwrap();
+  let mut cap = get_live_capture(get_interface(&iface).unwrap()).unwrap();
   println!("{:#?}", cap.get_datalink());
   println!("{:#?}", cap.list_datalinks().unwrap());
 
   loop {
     match cap.next() {
-      Err(ref err) => match err {
-        PcapError::TimeoutExpired => {
+      Err(ref err) => {
+        if let PcapError::TimeoutExpired = err {
           // this is called on windows at least!
-        }
-        _ => {
+        } else {
           panic!("{}", err);
         }
-      },
+      }
       Ok(ref packet) => {
         println!("packet {:#?}", packet);
         break;

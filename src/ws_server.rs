@@ -53,7 +53,7 @@ impl Handler for Server {
 pub fn start_blocking(
   addr: &str,
   event_receiver: Receiver<Event>,
-  mut stop_notify: Notify,
+  stop_notify: &mut Notify,
 ) -> Result<()> {
   debug!("starting websocket server on {}", addr);
 

@@ -23,7 +23,7 @@ pub fn get_capture(capture_type: CaptureType) -> Result<Capture<dyn Activated>> 
     CaptureType::Stdin => get_stdin_capture()?.into(),
     CaptureType::File(path) => get_file_capture(path)?.into(),
     CaptureType::Interface(interface_name) => {
-      let device = get_interface(interface_name.to_string())?;
+      let device = get_interface(&interface_name)?;
       get_live_capture(device)?.into()
     }
   })
@@ -33,7 +33,7 @@ pub fn start_blocking(
   mut capture: Capture<dyn Activated>,
   mut store: Store,
   sleep_playback: bool,
-  stop_notify: Notify,
+  stop_notify: &Notify,
 ) -> Result<()> {
   let mut maybe_last_time: Option<Duration> = None;
 
@@ -74,6 +74,7 @@ pub fn start_blocking(
         };
 
         if sleep_playback {
+          #[allow(clippy::cast_sign_loss)]
           let current_time = std::time::Duration::new(
             packet.header.ts.tv_sec as u64,
             (packet.header.ts.tv_usec * 1000) as u32,

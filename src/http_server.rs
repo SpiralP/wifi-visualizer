@@ -4,7 +4,7 @@ use log::{debug, info};
 use std::time::Duration;
 use tiny_http::{Header, Response, Server};
 
-pub fn start_blocking(addr: &str, stop_notify: Notify) -> Result<()> {
+pub fn start_blocking(addr: &str, stop_notify: &Notify) -> Result<()> {
   info!("starting http server on http://{}/", addr);
 
   let server = Server::http(addr).map_err(Error::from_boxed_compat)?;
@@ -18,23 +18,20 @@ pub fn start_blocking(addr: &str, stop_notify: Notify) -> Result<()> {
 
       let url = request.url();
 
-      match parceljs::get_file(&url) {
-        Ok(data) => {
-          let mut response = Response::from_data(data);
+      if let Ok(data) = parceljs::get_file(&url) {
+        let mut response = Response::from_data(data);
 
-          if let Some(content_type) = parceljs::get_content_type(&url) {
-            let header = Header::from_bytes(&b"Content-Type"[..], content_type)
-              .map_err(|_| err_msg("couldn't convert content-type"))?;
-            response.add_header(header);
-          }
-
-          let _ = request.respond(response);
+        if let Some(content_type) = parceljs::get_content_type(&url) {
+          let header = Header::from_bytes(&b"Content-Type"[..], content_type)
+            .map_err(|_| err_msg("couldn't convert content-type"))?;
+          response.add_header(header);
         }
-        Err(_) => {
-          let response = Response::empty(404);
 
-          let _ = request.respond(response);
-        }
+        let _ = request.respond(response);
+      } else {
+        let response = Response::empty(404);
+
+        let _ = request.respond(response);
       }
     }
   }
