@@ -1,21 +1,14 @@
 use crate::events::Event;
 use crossbeam_channel::*;
+use helpers::{check_notified_return, notify::Notify, thread};
 use log::{debug, info};
-use std::{
-  sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-  },
-  thread,
-  time::Duration,
-};
 use ws::{Builder, CloseCode, Handler, Handshake, Message, Result, Sender, Settings};
 
 // Server WebSocket handler
 struct Server {
   sender: ws::Sender,
   event_receiver: Option<Receiver<Event>>,
-  stop_notify: Arc<AtomicBool>,
+  stop_notify: Notify,
 }
 
 impl Handler for Server {
@@ -26,22 +19,17 @@ impl Handler for Server {
     let sender = self.sender.clone();
     let stop_notify = self.stop_notify.clone();
 
-    thread::Builder::new()
-      .name("event_receiver_thread".into())
-      .spawn(move || {
-        for event in event_receiver {
-          if stop_notify.load(Ordering::SeqCst) {
-            return;
-          }
+    thread::spawn("event_receiver_thread", move || {
+      for event in event_receiver {
+        check_notified_return!(stop_notify);
 
-          sender.send(serde_json::to_string(&event).unwrap()).unwrap();
-        }
+        sender.send(serde_json::to_string(&event).unwrap()).unwrap();
+      }
 
-        info!("event loop done");
+      info!("event loop done");
 
-        let _ = sender.close(CloseCode::Normal);
-      })
-      .unwrap();
+      let _ = sender.close(CloseCode::Normal);
+    });
 
     Ok(()) // don't close yet
   }
@@ -58,14 +46,14 @@ impl Handler for Server {
     info!("websocket closed");
     let _ = self.sender.shutdown();
 
-    self.stop_notify.store(true, Ordering::SeqCst);
+    self.stop_notify.notify();
   }
 }
 
 pub fn start_blocking(
   addr: &str,
   event_receiver: Receiver<Event>,
-  stop_notify: Arc<AtomicBool>,
+  mut stop_notify: Notify,
 ) -> Result<()> {
   debug!("starting websocket server on {}", addr);
 
@@ -87,13 +75,8 @@ pub fn start_blocking(
 
   let broadcaster = websocket.broadcaster();
 
-  thread::spawn(move || loop {
-    thread::sleep(Duration::from_millis(100));
-
-    if stop_notify.load(Ordering::SeqCst) {
-      let _ = broadcaster.shutdown();
-      break;
-    }
+  stop_notify.wait(move || {
+    let _ = broadcaster.shutdown();
   });
 
   websocket.listen(addr)?;

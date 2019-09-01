@@ -13,32 +13,12 @@ use crate::{
   packet_capture::{get_capture, CaptureType},
 };
 use clap::{clap_app, crate_name, crate_version};
+use helpers::{check_err_return, check_notified_return, notify::Notify, thread};
 use log::{debug, error};
-use std::{
-  sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-  },
-  thread,
-  time::Duration,
-};
+use std::time::Duration;
 
 const HTTP_SERVER_ADDR: &str = "127.0.0.1:8000";
 const WEBSOCKET_SERVER_ADDR: &str = "127.0.0.1:8001";
-
-macro_rules! check_fail {
-  ($x:expr, $stop_notify:expr) => {
-    match $x {
-      Err(err) => {
-        $stop_notify.store(true, Ordering::SeqCst);
-        error!("{}", err);
-        return;
-      }
-
-      Ok(ret) => ret,
-    }
-  };
-}
 
 fn main() -> Result<()> {
   let matches = clap_app!(app =>
@@ -95,67 +75,53 @@ fn main() -> Result<()> {
   let mut store = Store::new();
   let event_receiver = store.get_receiver().unwrap();
 
-  let stop_notify = Arc::new(AtomicBool::new(false));
+  let stop_notify = Notify::new();
 
   let ws_server_thread = {
-    let stop_notify = stop_notify.clone();
+    let mut stop_notify = stop_notify.clone();
 
-    thread::Builder::new()
-      .name("ws_server_thread".into())
-      .spawn(move || {
-        check_fail!(
-          ws_server::start_blocking(WEBSOCKET_SERVER_ADDR, event_receiver, stop_notify.clone()),
-          stop_notify
-        );
-      })
-      .unwrap()
+    thread::spawn("ws_server_thread", move || {
+      check_err_return!(
+        ws_server::start_blocking(WEBSOCKET_SERVER_ADDR, event_receiver, stop_notify.clone()),
+        stop_notify
+      );
+    })
   };
 
   let http_server_thread = {
-    let stop_notify = stop_notify.clone();
+    let mut stop_notify = stop_notify.clone();
 
-    thread::Builder::new()
-      .name("http_server_thread".into())
-      .spawn(move || {
-        check_fail!(
-          http_server::start_blocking(HTTP_SERVER_ADDR, stop_notify.clone()),
-          stop_notify
-        );
-      })
-      .unwrap()
+    thread::spawn("http_server_thread", move || {
+      check_err_return!(
+        http_server::start_blocking(HTTP_SERVER_ADDR, stop_notify.clone()),
+        stop_notify
+      );
+    })
   };
 
   let packet_capture_thread = {
-    let stop_notify = stop_notify.clone();
+    let mut stop_notify = stop_notify.clone();
 
-    thread::Builder::new()
-      .name("packet_capture_thread".into())
-      .spawn(move || {
-        let capture = check_fail!(get_capture(capture_type), stop_notify);
-        check_fail!(
-          packet_capture::start_blocking(capture, store, sleep_playback, stop_notify.clone()),
-          stop_notify
-        );
-      })
-      .unwrap()
+    thread::spawn("packet_capture_thread", move || {
+      let capture = check_err_return!(get_capture(capture_type), stop_notify);
+      check_err_return!(
+        packet_capture::start_blocking(capture, store, sleep_playback, stop_notify.clone()),
+        stop_notify
+      );
+    })
   };
 
   // TODO wait until packet capture begins successfully?
   let no_browser = matches.is_present("no_browser");
 
   if !no_browser {
-    thread::Builder::new()
-      .name("open http thread".into())
-      .spawn(move || {
-        thread::sleep(Duration::from_millis(100));
+    thread::spawn("open http thread", move || {
+      thread::sleep(Duration::from_millis(100));
 
-        if stop_notify.load(Ordering::SeqCst) {
-          return;
-        }
+      check_notified_return!(stop_notify);
 
-        open::that(format!("http://{}/", HTTP_SERVER_ADDR)).unwrap();
-      })
-      .unwrap();
+      open::that(format!("http://{}/", HTTP_SERVER_ADDR)).unwrap();
+    });
   }
 
   ws_server_thread.join().unwrap();

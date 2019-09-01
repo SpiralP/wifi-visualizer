@@ -1,23 +1,16 @@
 use crate::error::*;
+use helpers::{check_notified_break, notify::Notify};
 use log::{debug, info};
-use std::{
-  sync::{
-    atomic::{AtomicBool, Ordering},
-    Arc,
-  },
-  time::Duration,
-};
+use std::time::Duration;
 use tiny_http::{Header, Response, Server};
 
-pub fn start_blocking(addr: &str, stop_notify: Arc<AtomicBool>) -> Result<()> {
+pub fn start_blocking(addr: &str, stop_notify: Notify) -> Result<()> {
   info!("starting http server on http://{}/", addr);
 
   let server = Server::http(addr).map_err(Error::from_boxed_compat)?;
 
   loop {
-    if stop_notify.load(Ordering::SeqCst) {
-      break;
-    }
+    check_notified_break!(stop_notify);
 
     // blocks until the next request is received
     if let Some(request) = server.recv_timeout(Duration::from_millis(1000))? {
