@@ -6,7 +6,7 @@ use crate::{
   error::*,
   events::{handle_frame, store::Store},
 };
-use helpers::{check_notified_break, notify::Notify};
+use helpers::{check_notified_return, notify::Notify};
 use ieee80211::Frame;
 use log::debug;
 use pcap::{linktypes, Activated, Capture, Error as PcapError};
@@ -52,7 +52,7 @@ pub fn start_blocking(
   };
 
   loop {
-    check_notified_break!(stop_notify);
+    check_notified_return!(stop_notify, Ok(()));
 
     match capture.next() {
       Err(ref err) => match err {

@@ -1,5 +1,5 @@
 use crate::error::*;
-use helpers::{check_notified_break, notify::Notify};
+use helpers::{check_notified_return, notify::Notify};
 use log::{debug, info};
 use std::time::Duration;
 use tiny_http::{Header, Response, Server};
@@ -10,7 +10,7 @@ pub fn start_blocking(addr: &str, stop_notify: Notify) -> Result<()> {
   let server = Server::http(addr).map_err(Error::from_boxed_compat)?;
 
   loop {
-    check_notified_break!(stop_notify);
+    check_notified_return!(stop_notify, Ok(()));
 
     // blocks until the next request is received
     if let Some(request) = server.recv_timeout(Duration::from_millis(1000))? {
@@ -38,6 +38,4 @@ pub fn start_blocking(addr: &str, stop_notify: Notify) -> Result<()> {
       }
     }
   }
-
-  Ok(())
 }
