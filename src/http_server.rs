@@ -10,8 +10,6 @@ pub fn start_blocking(addr: &str, stop_notify: &Notify) -> Result<()> {
   let server = Server::http(addr).map_err(Error::from_boxed_compat)?;
 
   loop {
-    check_notified_return!(stop_notify, Ok(()));
-
     // blocks until the next request is received
     if let Some(request) = server.recv_timeout(Duration::from_millis(1000))? {
       debug!("{:#?}", request);
@@ -33,6 +31,9 @@ pub fn start_blocking(addr: &str, stop_notify: &Notify) -> Result<()> {
 
         let _ = request.respond(response);
       }
+    } else {
+      // timeout
+      check_notified_return!(stop_notify, Ok(()));
     }
   }
 }

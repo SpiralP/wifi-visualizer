@@ -1,14 +1,12 @@
 import {
   hashMacs,
-  iconNameToCode,
   companyToIconCode,
-  connect,
   byteArrayToString,
   status,
 } from "./helpers";
 import vis from "vis";
 import ReactDOM from "react-dom";
-import React, { useState, useEffect } from "react";
+import React from "react";
 import Websocket from "react-websocket";
 import oui from "./oui";
 import { Network } from "./Network";
@@ -23,18 +21,6 @@ if (module.hot != null) {
 }
 
 status("index.tsx");
-
-function ag(id) {
-  const company = oui(id);
-
-  const ag = {
-    id,
-    icon: { code: companyToIconCode(company), size: 50, color: "#ff00ff" },
-    title: company ? `${company}<br />${id}` : id,
-  };
-
-  return ag;
-}
 
 interface AppState {
   connected: boolean;
@@ -51,7 +37,7 @@ class App extends React.Component<{}, AppState> {
       const company = oui(id);
 
       // console.log(id);
-      if (id === "98-d6-f7-01-01-00") {
+      if (id === "98-d6-f7-01-01-00" || id == "48-a4-72-1b-d3-43") {
         console.log("GOT ME!!!!");
 
         this.setState({
@@ -194,11 +180,11 @@ class App extends React.Component<{}, AppState> {
           url="ws://127.0.0.1:8001/"
           onMessage={(msg: string) => this.handleMessage(msg)}
           onOpen={() => {
-            console.log("opened");
+            status("websocket opened");
             this.setState({ connected: true });
           }}
           onClose={() => {
-            console.log("closed");
+            status("websocket closed");
             this.setState({ connected: false });
           }}
           debug={true}
