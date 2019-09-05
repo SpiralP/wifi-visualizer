@@ -74,6 +74,7 @@ pub fn start_blocking(
         };
 
         if sleep_playback {
+          #[allow(clippy::cast_possible_truncation)]
           #[allow(clippy::cast_sign_loss)]
           let current_time = std::time::Duration::new(
             packet.header.ts.tv_sec as u64,
