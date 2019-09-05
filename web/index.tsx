@@ -153,7 +153,7 @@ class App extends React.Component<{}, AppState> {
               id,
               from,
               to,
-              color: { color: "black", highlight: "black", hover: "black" },
+              color: { color: "grey", highlight: "grey", hover: "grey" },
               dashes: true,
               width: 0.1,
             },
@@ -185,8 +185,6 @@ class App extends React.Component<{}, AppState> {
   }
 
   render() {
-    console.log("App render");
-
     const { nodes, edges } = this.state;
 
     return (

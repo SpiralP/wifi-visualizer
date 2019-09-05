@@ -25,8 +25,6 @@ export class Network extends React.PureComponent<NetworkProps, NetworkState> {
   containerRef: React.RefObject<HTMLDivElement> = React.createRef();
 
   componentDidMount() {
-    console.log("did mount");
-
     const { containerRef, edges, nodes } = this;
 
     if (!containerRef.current) {
@@ -91,42 +89,21 @@ export class Network extends React.PureComponent<NetworkProps, NetworkState> {
   }
 
   componentDidUpdate(lastProps: NetworkProps) {
-    console.log("update");
-
     if (this.props.nodes !== lastProps.nodes) {
-      console.log("update nodes");
-
       Object.keys(this.props.nodes)
         .filter((key) => this.props.nodes[key] !== lastProps.nodes[key])
         .forEach((key) => {
-          console.log(`${key}`);
           this.nodes.update(this.props.nodes[key]);
         });
     }
 
     if (this.props.edges !== lastProps.edges) {
-      console.log("update edges");
-
       Object.keys(this.props.edges)
         .filter((key) => this.props.edges[key] !== lastProps.edges[key])
         .forEach((key) => {
-          console.log(`${key}`);
           this.edges.update(this.props.edges[key]);
         });
     }
-
-    // Object.keys(this.props)
-    //   .filter((key) => this.props[key] !== lastProps[key])
-    //   .map((key) => {
-    //     console.log(
-    //       "changed property:",
-    //       key,
-    //       "from",
-    //       lastProps[key],
-    //       "to",
-    //       this.props[key]
-    //     );
-    //   });
   }
 
   render() {

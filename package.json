@@ -19,7 +19,6 @@
     "clipboard-copy": "^2.0.1",
     "react": "^16.9.0",
     "react-dom": "^16.9.0",
-    "react-vis": "^1.11.7",
     "react-websocket": "^2.0.1",
     "vis": "^4.21.0"
   },
