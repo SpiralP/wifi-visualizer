@@ -16,12 +16,17 @@ use crate::{
 use clap::{clap_app, crate_name, crate_version};
 use helpers::{check_err_return, check_notified_return, notify::Notify, thread};
 use log::{debug, error};
-use std::time::Duration;
+use std::{
+  net::{IpAddr, Ipv4Addr, SocketAddr},
+  time::Duration,
+};
 
-const HTTP_SERVER_ADDR: &str = "127.0.0.1:8000";
-const WEBSOCKET_SERVER_ADDR: &str = "127.0.0.1:8001";
+#[tokio::main]
+async fn main() -> Result<()> {
+  let ip = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
+  let http_server_addr = SocketAddr::new(ip, 8000);
+  let websocket_server_addr = SocketAddr::new(ip, 8001);
 
-fn main() -> Result<()> {
   let matches = clap_app!(app =>
       (name: crate_name!())
       (version: crate_version!())
@@ -83,22 +88,15 @@ fn main() -> Result<()> {
 
     thread::spawn("ws_server_thread", move || {
       check_err_return!(
-        ws_server::start_blocking(WEBSOCKET_SERVER_ADDR, event_receiver, &mut stop_notify),
+        ws_server::start_blocking(&websocket_server_addr, event_receiver, &mut stop_notify),
         stop_notify
       );
     })
   };
 
-  let http_server_thread = {
-    let mut stop_notify = stop_notify.clone();
-
-    thread::spawn("http_server_thread", move || {
-      check_err_return!(
-        http_server::start_blocking(HTTP_SERVER_ADDR, &stop_notify),
-        stop_notify
-      );
-    })
-  };
+  tokio::spawn(async move {
+    http_server::start(&http_server_addr).await.unwrap(); // TODO just error!()
+  });
 
   let packet_capture_thread = {
     let mut stop_notify = stop_notify.clone();
@@ -121,12 +119,11 @@ fn main() -> Result<()> {
 
       check_notified_return!(stop_notify);
 
-      open::that(format!("http://{}/", HTTP_SERVER_ADDR)).unwrap();
+      open::that(format!("http://{}/", http_server_addr)).unwrap();
     });
   }
 
   ws_server_thread.join().unwrap();
-  http_server_thread.join().unwrap();
   packet_capture_thread.join().unwrap();
 
   Ok(())

@@ -2,6 +2,7 @@ use crate::events::Event;
 use crossbeam_channel::*;
 use helpers::{check_notified_return, notify::Notify, thread};
 use log::{debug, info};
+use std::net::SocketAddr;
 use ws::{Builder, CloseCode, Handler, Handshake, Message, Result, Sender, Settings};
 
 // Server WebSocket handler
@@ -51,7 +52,7 @@ impl Handler for Server {
 }
 
 pub fn start_blocking(
-  addr: &str,
+  addr: &SocketAddr,
   event_receiver: Receiver<Event>,
   stop_notify: &mut Notify,
 ) -> Result<()> {

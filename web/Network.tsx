@@ -1,14 +1,7 @@
-import {
-  hashMacs,
-  iconNameToCode,
-  companyToIconCode,
-  byteArrayToString,
-  status,
-} from "./helpers";
+import { iconNameToCode } from "./helpers";
 import copy from "clipboard-copy";
 import vis from "vis";
 import React from "react";
-import oui from "./oui";
 
 interface NetworkProps {
   nodes: { [id: string]: vis.Node };
@@ -77,8 +70,11 @@ export class Network extends React.PureComponent<NetworkProps, NetworkState> {
 
     // this.edges.add({ from: "a", to: "b", id: "ab" });
 
+    // @ts-ignore
     window.edges = this.edges;
+    // @ts-ignore
     window.nodes = this.nodes;
+    // @ts-ignore
     window.vis = vis;
   }
 
