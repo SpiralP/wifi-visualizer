@@ -16,7 +16,7 @@ pub fn initialize(debug: bool) {
     env_logger::Builder::from_default_env()
       .default_format_timestamp(false)
       .default_format_module_path(false)
-      .filter_module(&env!("CARGO_PKG_NAME").replace("-", "_"), level)
+      .filter(None, level) // &env!("CARGO_PKG_NAME").replace("-", "_")
       .init();
   });
 }

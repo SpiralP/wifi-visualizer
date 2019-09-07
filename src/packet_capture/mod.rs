@@ -12,6 +12,7 @@ use log::debug;
 use pcap::{linktypes, Activated, Capture, Error as PcapError};
 use std::{thread, time::Duration};
 
+#[derive(Clone)]
 pub enum CaptureType {
   Stdin,
   File(String),
@@ -33,7 +34,7 @@ pub fn start_blocking(
   mut capture: Capture<dyn Activated>,
   mut store: Store,
   sleep_playback: bool,
-  stop_notify: &Notify,
+  // stop_notify: &Notify,
 ) -> Result<()> {
   let mut maybe_last_time: Option<Duration> = None;
 
@@ -52,7 +53,7 @@ pub fn start_blocking(
   };
 
   loop {
-    check_notified_return!(stop_notify, Ok(()));
+    // check_notified_return!(stop_notify, Ok(()));
 
     match capture.next() {
       Err(ref err) => match err {

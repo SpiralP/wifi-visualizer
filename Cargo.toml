@@ -23,9 +23,11 @@ serde_json = "1.0.40"
 time = "0.1.42"
 ws = "0.9.0"
 helpers = { path = "../rust-helpers" }
-hyper = "0.13.0-alpha.1"
-futures-preview = { version = "0.3.0-alpha.18", features = ["compat"] }
-tokio = "0.2.0-alpha.4"
+tokio = "0.1.22"
+warp = "0.1.19"
+hyper = "0.12.34"
+http = "0.1.18"
+futures = "0.1.29"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 caps = "0.3.3"

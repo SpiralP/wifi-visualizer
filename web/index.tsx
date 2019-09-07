@@ -38,8 +38,6 @@ class App extends React.Component<{}, AppState> {
 
       // console.log(id);
       if (id === "98-d6-f7-01-01-00" || id == "48-a4-72-1b-d3-43") {
-        console.log("GOT ME!!!!");
-
         this.setState({
           nodes: {
             ...this.state.nodes,
@@ -177,7 +175,7 @@ class App extends React.Component<{}, AppState> {
       <div>
         <Network nodes={nodes} edges={edges} />
         <Websocket
-          url="ws://127.0.0.1:8001/"
+          url={`ws://${location.host}/ws`}
           onMessage={(msg: string) => this.handleMessage(msg)}
           onOpen={() => {
             status("websocket opened");

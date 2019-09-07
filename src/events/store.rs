@@ -1,5 +1,5 @@
 use super::*;
-use crossbeam_channel::*;
+use crossbeam_channel::{bounded, Receiver, Sender};
 use ieee80211::MacAddress;
 use serde_derive::*;
 use std::collections::{HashMap, HashSet};
@@ -45,7 +45,7 @@ pub struct Store {
 
 impl Store {
   pub fn new() -> Self {
-    let (sender, receiver) = unbounded();
+    let (sender, receiver) = bounded(1024);
 
     Self {
       addresses: HashMap::new(),
