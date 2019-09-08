@@ -24,8 +24,9 @@ fn main() -> Result<()> {
       (name: crate_name!())
       (version: crate_version!())
 
-      (@arg debug: -v --verbose --debug ... "Show debug messages")
+      (@arg debug: -v --verbose --debug ... "Show debug messages, multiple flags for higher verbosity")
       (@arg no_browser: -n --("no-browser") "Don't open browser")
+      (@arg no_sleep_playback: requires[input_file] --("no-sleep-playback") "Don't play back files at original speed")
 
       (@arg input_file: conflicts_with[interface] -f --file [FILE] +required "File to read from")
       (@arg interface: conflicts_with[input_file] -i --interface [INTERFACE] +required "Interface to capture packets from")
@@ -47,7 +48,10 @@ fn main() -> Result<()> {
     if input_file == "-" {
       CaptureType::Stdin
     } else {
-      CaptureType::File(input_file.to_string())
+      CaptureType::File(
+        input_file.to_string(),
+        !matches.is_present("no_sleep_playback"),
+      )
     }
   } else if let Some(interface_name) = matches.value_of("interface") {
     debug!("got interface name {:?}", interface_name);

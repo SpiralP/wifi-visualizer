@@ -10,7 +10,7 @@ use tokio::prelude::*;
 #[derive(Clone)]
 pub enum CaptureType {
   Stdin,
-  File(String),
+  File(String, bool), // path, sleep_playback
   Interface(String),
 }
 
@@ -19,8 +19,8 @@ pub fn get_capture_iterator(capture_type: CaptureType) -> Result<CaptureIterator
 
   let capture = match capture_type {
     CaptureType::Stdin => get_stdin_capture()?.into(),
-    CaptureType::File(path) => {
-      sleep_playback = true;
+    CaptureType::File(path, sleep_playback2) => {
+      sleep_playback = sleep_playback2;
       get_file_capture(path)?.into()
     }
     CaptureType::Interface(interface_name) => {
