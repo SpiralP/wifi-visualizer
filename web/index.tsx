@@ -1,6 +1,6 @@
 import "@blueprintjs/icons/lib/css/blueprint-icons.css";
 import "@blueprintjs/core/lib/css/blueprint.css";
-import "vis/dist/vis.css"; // for popups
+import "vis-network/dist/vis-network.css"; // for popups
 import "@fortawesome/fontawesome-free/css/solid.css";
 // import "@fortawesome/fontawesome-free/css/regular.css"; // adding regular will break all solid
 import "@fortawesome/fontawesome-free/css/brands.css";

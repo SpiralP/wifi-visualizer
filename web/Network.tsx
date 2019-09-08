@@ -1,6 +1,6 @@
 import { iconNameToCode } from "./helpers";
 import copy from "clipboard-copy";
-import vis from "vis";
+import vis from "vis-network";
 import React from "react";
 import { IToaster } from "@blueprintjs/core";
 
