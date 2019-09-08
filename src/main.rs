@@ -3,6 +3,7 @@
 mod error;
 mod events;
 mod http_server;
+mod inject_stream;
 mod logger;
 mod packet_capture;
 mod websocket;

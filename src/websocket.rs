@@ -1,6 +1,7 @@
 use crate::{
   error::*,
   events::{handle_frame, Event, Store},
+  inject_stream::InjectBeforeErrorStreamExt,
   packet_capture::{self, get_capture_iterator, CaptureType},
 };
 use ieee80211::Frame;
@@ -50,10 +51,7 @@ fn start_capture_event_stream(
         })
         .map(stream::iter_ok)
         .flatten()
-        .map(|item| vec![Ok::<_, Error>(item)])
-        .or_else(|e| Ok::<_, Error>(vec![Ok(Event::Error(format!("{}", e))), Err(e)]))
-        .map(stream::iter_result)
-        .flatten()
+        .inject_before_error(|e| Event::Error(format!("{}", e)))
     })
   })
 }
