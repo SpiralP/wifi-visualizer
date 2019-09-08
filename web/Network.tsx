@@ -85,7 +85,15 @@ export class Network extends React.PureComponent<NetworkProps, NetworkState> {
     window.nodes = this.nodes;
     // @ts-ignore
     window.vis = vis;
-  }
+
+    Object.keys(this.props.nodes).forEach((key) => {
+      this.nodes.update(this.props.nodes[key]);
+    });
+
+    Object.keys(this.props.edges).forEach((key) => {
+      this.edges.update(this.props.edges[key]);
+    });
+  } // componentDidMount
 
   componentWillUnmount() {
     if (this.network) {
@@ -112,6 +120,11 @@ export class Network extends React.PureComponent<NetworkProps, NetworkState> {
   }
 
   render() {
-    return <div ref={this.containerRef} />;
+    return (
+      <div
+        style={{ height: "100vh", width: "100vw" }}
+        ref={this.containerRef}
+      />
+    );
   }
 }
