@@ -1,12 +1,4 @@
-import {
-  HTMLTable,
-  Icon,
-  ContextMenuTarget,
-  Menu,
-  Intent,
-  Alert,
-  MenuItem,
-} from "@blueprintjs/core";
+import { Intent, Alert, IToaster } from "@blueprintjs/core";
 import {
   hashMacs,
   companyToIconCode,
@@ -19,6 +11,10 @@ import Websocket from "react-websocket";
 import oui from "./oui";
 import { Network } from "./Network";
 
+interface AppProps {
+  toaster: IToaster;
+}
+
 interface AppState {
   connected: boolean;
   nodes: { [id: string]: vis.Node };
@@ -26,7 +22,7 @@ interface AppState {
   error?: string;
 }
 
-export class App extends React.Component<{}, AppState> {
+export class App extends React.Component<AppProps, AppState> {
   state: AppState = {
     connected: false,
     nodes: {},
@@ -176,6 +172,7 @@ export class App extends React.Component<{}, AppState> {
   }
 
   render() {
+    const { toaster } = this.props;
     const { nodes, edges, error } = this.state;
 
     return (
@@ -195,7 +192,7 @@ export class App extends React.Component<{}, AppState> {
           </p>
         </Alert>
 
-        <Network nodes={nodes} edges={edges} />
+        <Network nodes={nodes} edges={edges} toaster={toaster} />
         <Websocket
           url={`ws://${location.host}/ws`}
           onMessage={(msg: string) => this.handleMessage(msg)}
@@ -205,6 +202,10 @@ export class App extends React.Component<{}, AppState> {
           }}
           onClose={() => {
             status("websocket closed");
+            toaster.show({
+              message: "websocket closed",
+              intent: "danger",
+            });
             this.setState({ connected: false });
           }}
           debug={true}

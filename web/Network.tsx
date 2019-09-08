@@ -2,10 +2,12 @@ import { iconNameToCode } from "./helpers";
 import copy from "clipboard-copy";
 import vis from "vis";
 import React from "react";
+import { IToaster } from "@blueprintjs/core";
 
 interface NetworkProps {
   nodes: { [id: string]: vis.Node };
   edges: { [id: string]: vis.Edge };
+  toaster: IToaster;
 }
 
 interface NetworkState {}
@@ -59,8 +61,15 @@ export class Network extends React.PureComponent<NetworkProps, NetworkState> {
         if (event.nodes.length === 1) {
           const addr = event.nodes[0];
           copy(addr)
-            .then(() => console.log(`copied ${addr}`))
-            .catch(() => console.warn("failed to copy"));
+            .then(() => {
+              this.props.toaster.show({ message: `copied "${addr}"` });
+            })
+            .catch(() => {
+              this.props.toaster.show({
+                message: `failed to copy`,
+                intent: "danger",
+              });
+            });
         }
       }
     );
