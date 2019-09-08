@@ -14,7 +14,10 @@ pub fn start(addr: SocketAddr, capture_type: CaptureType) -> impl Future<Item = 
       .and(warp::ws2())
       .map(move |ws: warp::ws::Ws2| {
         let capture_type = capture_type.clone();
-        ws.on_upgrade(move |ws| websocket::start(ws, capture_type))
+        ws.on_upgrade(move |ws| {
+          tokio::spawn(websocket::start(ws, capture_type));
+          future::ok(())
+        })
       })
       .or(warp::path::full().map(|path| ParceljsResponder { path }));
 

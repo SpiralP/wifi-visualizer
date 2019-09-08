@@ -152,11 +152,11 @@ export class App extends React.Component<AppProps, AppState> {
       this.setState({ nodes: { ...this.state.nodes, [from]: node } });
     } else if (event.type === "InactiveAddress") {
       const addrs = event.data;
+      const changed = {};
       addrs.forEach((id) => {
-        // TODO don't edit this.state directly!
-        this.state.nodes[id] = { ...this.state.nodes[id], icon: { size: 25 } };
+        changed[id] = { ...this.state.nodes[id], icon: { size: 25 } };
       });
-      this.setState({ nodes: { ...this.state.nodes } });
+      this.setState({ nodes: { ...this.state.nodes, ...changed } });
     } else if (event.type === "Error") {
       const error = event.data;
       console.warn("Error", error);
