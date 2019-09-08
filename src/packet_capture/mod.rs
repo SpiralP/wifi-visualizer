@@ -5,7 +5,6 @@ use self::{get_capture::*, strip_radiotap::strip_radiotap};
 use crate::error::*;
 use pcap::{linktypes, Activated, Capture, Error as PcapError};
 use std::{thread, time::Duration};
-use tokio::prelude::*;
 
 #[derive(Clone)]
 pub enum CaptureType {
@@ -30,12 +29,6 @@ pub fn get_capture_iterator(capture_type: CaptureType) -> Result<CaptureIterator
   };
 
   CaptureIterator::new(capture, sleep_playback)
-}
-
-pub fn start(
-  capture_iterator: CaptureIterator,
-) -> impl Future<Item = impl Stream<Item = Vec<u8>, Error = Error>, Error = Error> {
-  future::lazy(move || Ok(stream::iter_result(capture_iterator)))
 }
 
 pub struct CaptureIterator {

@@ -2,7 +2,7 @@ use crate::{
   error::*,
   events::{handle_frame, Event, Store},
   inject_stream::InjectBeforeErrorStreamExt,
-  packet_capture::{self, get_capture_iterator, CaptureType},
+  packet_capture::{get_capture_iterator, CaptureType},
 };
 use ieee80211::Frame;
 use log::{error, info};
@@ -18,6 +18,7 @@ pub fn start(ws: WebSocket, capture_type: CaptureType) -> impl Future<Item = (),
   start_capture_event_stream(capture_type)
     .then(move |result| {
       // check for pre-stream errors
+      // TODO don't do it this way
       let ag: Box<dyn Stream<Item = Event, Error = Error> + Send> = match result {
         Ok(event_stream) => Box::new(event_stream),
         Err(e) => {
@@ -43,15 +44,15 @@ fn start_capture_event_stream(
   future::lazy(move || get_capture_iterator(capture_type)).and_then(|capture_iterator| {
     let mut store = Store::new();
 
-    packet_capture::start(capture_iterator).map(move |packet_data_stream| {
-      packet_data_stream
+    Ok(
+      stream::iter_result(capture_iterator)
         .and_then(move |data| {
           let frame = Frame::new(&data);
           handle_frame(&mut store, &frame)
         })
         .map(stream::iter_ok)
         .flatten()
-        .inject_before_error(|e| Event::Error(format!("{}", e)))
-    })
+        .inject_before_error(|e| Event::Error(format!("{}", e))),
+    )
   })
 }
