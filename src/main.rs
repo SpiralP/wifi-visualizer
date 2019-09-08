@@ -1,5 +1,4 @@
 #![warn(clippy::pedantic)]
-#![allow(clippy::needless_return)]
 
 mod error;
 mod events;
@@ -8,17 +7,12 @@ mod logger;
 mod packet_capture;
 mod websocket;
 
-use crate::{
-  error::*,
-  events::Store,
-  packet_capture::{get_capture, CaptureType},
-};
+use crate::{error::*, packet_capture::CaptureType};
 use clap::{clap_app, crate_name, crate_version};
-use helpers::{check_err_return, check_notified_return, notify::Notify, thread};
 use log::{debug, error};
 use std::{
   net::{IpAddr, Ipv4Addr, SocketAddr},
-  time::Duration,
+  time::{Duration, Instant},
 };
 use tokio::{prelude::*, runtime::Runtime};
 
@@ -30,7 +24,7 @@ fn main() -> Result<()> {
       (name: crate_name!())
       (version: crate_version!())
 
-      (@arg debug: -v --verbose --debug "Show debug messages")
+      (@arg debug: -v --verbose --debug ... "Show debug messages")
       (@arg no_browser: -n --("no-browser") "Don't open browser")
 
       (@arg input_file: conflicts_with[interface] -f --file [FILE] +required "File to read from")
@@ -39,10 +33,13 @@ fn main() -> Result<()> {
   .get_matches();
 
   #[cfg(debug_assertions)]
-  logger::initialize(true);
+  logger::initialize(true, false);
 
   #[cfg(not(debug_assertions))]
-  logger::initialize(matches.is_present("debug"));
+  logger::initialize(
+    matches.is_present("debug"),
+    matches.occurrences_of("debug") > 1,
+  );
 
   let capture_type = if let Some(input_file) = matches.value_of("input_file") {
     debug!("got input file {:?}", input_file);
@@ -77,20 +74,22 @@ fn main() -> Result<()> {
 
   let mut runtime = Runtime::new().expect("failed to start new Runtime");
 
-  let stop_notify = Notify::new();
-
   runtime.spawn(http_server::start(http_server_addr, capture_type));
 
   // TODO wait until packet capture begins successfully?
   let no_browser = matches.is_present("no_browser");
 
   if !no_browser {
-    thread::spawn("open http thread", move || {
-      thread::sleep(Duration::from_millis(100));
-      check_notified_return!(stop_notify);
+    runtime.spawn(
+      future::lazy(move || {
+        tokio::timer::Delay::new(Instant::now() + Duration::from_millis(100)).and_then(move |_| {
+          open::that(format!("http://{}/", http_server_addr)).unwrap();
 
-      open::that(format!("http://{}/", http_server_addr)).unwrap();
-    });
+          Ok(())
+        })
+      })
+      .map_err(|e| error!("url open: {}", e)),
+    );
   }
 
   runtime.shutdown_on_idle().wait().unwrap();

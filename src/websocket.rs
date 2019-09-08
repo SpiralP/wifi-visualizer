@@ -1,13 +1,10 @@
 use crate::{
-  events::{Event, Store},
-  packet_capture::{self, get_capture, CaptureType},
-  websocket,
+  error::*,
+  events::{handle_frame, Event, Store},
+  packet_capture::{self, get_capture_iterator, CaptureType},
 };
-use crossbeam_channel::{bounded, Receiver, Sender};
-use futures::prelude::*;
-use helpers::thread;
+use ieee80211::Frame;
 use log::error;
-use std::sync::{Arc, Mutex};
 use tokio::prelude::*;
 use warp::{
   filters::ws::{Message, WebSocket},
@@ -15,32 +12,36 @@ use warp::{
 };
 
 pub fn start(ws: WebSocket, capture_type: CaptureType) -> impl Future<Item = (), Error = ()> {
-  future::lazy(move || {
-    let event_receiver = start_capture(capture_type);
+  let (ws_sender, _ws_receiver) = ws.split();
 
-    stream::iter_ok(event_receiver.into_iter())
-      .map(|event| Message::text(serde_json::to_string(&event).unwrap()))
-      .forward(ws.sink_map_err(|err| {
-        error!("websocket sink error: {}", err);
-      }))
-      .map(|_| ())
-  })
+  // TODO somehow send errors through the websocket!
+  start_capture_event_stream(capture_type)
+    .and_then(move |event_stream| {
+      event_stream
+        .and_then(|event| serde_json::to_string(&event).map_err(Error::from))
+        .map(Message::text)
+        .forward(ws_sender)
+        .map(|_| ())
+    })
+    .map_err(|e| {
+      // ws.send(Message::text(String::from("HI")));
+      error!("websocket connection: {}", e)
+    })
 }
 
-fn start_capture(capture_type: CaptureType) -> Receiver<Event> {
-  let mut store = Store::new();
-  let event_receiver = store.get_receiver().unwrap();
+fn start_capture_event_stream(
+  capture_type: CaptureType,
+) -> impl Future<Item = impl Stream<Item = Event, Error = Error>, Error = Error> {
+  future::lazy(move || get_capture_iterator(capture_type)).and_then(|capture_iterator| {
+    let mut store = Store::new();
 
-  thread::spawn("packet_capture thread", move || {
-    let mut sleep_playback = false;
-    if let CaptureType::File(_) = capture_type {
-      sleep_playback = true;
-    }
-
-    let capture = get_capture(capture_type).unwrap();
-
-    packet_capture::start_blocking(capture, store, sleep_playback).unwrap();
-  });
-
-  event_receiver
+    packet_capture::start(capture_iterator).map(move |packet_data_stream| {
+      packet_data_stream
+        .map(move |data| {
+          let frame = Frame::new(&data);
+          stream::iter_ok(handle_frame(&mut store, &frame))
+        })
+        .flatten()
+    })
+  })
 }

@@ -1,5 +1,4 @@
 use super::*;
-use crossbeam_channel::{bounded, Receiver, Sender};
 use ieee80211::MacAddress;
 use serde_derive::*;
 use std::collections::{HashMap, HashSet};
@@ -39,27 +38,23 @@ pub struct Store {
   access_points: HashMap<MacAddress, AccessPointInfo>,
   probes: HashMap<MacAddress, HashSet<Vec<u8>>>,
 
-  sender: Sender<Event>,
-  receiver: Option<Receiver<Event>>,
+  buffer: Vec<Event>,
 }
 
 impl Store {
   pub fn new() -> Self {
-    let (sender, receiver) = bounded(1024);
-
     Self {
       addresses: HashMap::new(),
       connections: HashMap::new(),
       access_points: HashMap::new(),
       probes: HashMap::new(),
 
-      sender,
-      receiver: Some(receiver),
+      buffer: Vec::new(),
     }
   }
 
-  pub fn get_receiver(&mut self) -> Option<Receiver<Event>> {
-    self.receiver.take()
+  pub fn flush_buffer(&mut self) -> Vec<Event> {
+    self.buffer.drain(..).collect()
   }
 
   pub fn check_for_inactive(&mut self) {
@@ -80,10 +75,7 @@ impl Store {
       self.addresses.remove(&mac);
     }
 
-    self
-      .sender
-      .send(Event::InactiveAddress(macs_to_remove))
-      .unwrap();
+    self.buffer.push(Event::InactiveAddress(macs_to_remove));
   }
 
   pub fn add_address(&mut self, mac: MacAddress) {
@@ -97,7 +89,7 @@ impl Store {
 
     self.addresses.insert(mac, now);
     if is_new_addr {
-      self.sender.send(Event::NewAddress(mac)).unwrap();
+      self.buffer.push(Event::NewAddress(mac));
     }
   }
 
@@ -113,7 +105,7 @@ impl Store {
     self.add_address(mac);
 
     self.access_points.insert(mac, info.clone());
-    self.sender.send(Event::AccessPoint(mac, info)).unwrap();
+    self.buffer.push(Event::AccessPoint(mac, info));
   }
 
   pub fn change_connection(&mut self, mac1: MacAddress, mac2: MacAddress, kind: ConnectionType) {
@@ -147,10 +139,7 @@ impl Store {
     }
 
     self.connections.insert(hash, kind.clone());
-    self
-      .sender
-      .send(Event::Connection(mac1, mac2, kind))
-      .unwrap();
+    self.buffer.push(Event::Connection(mac1, mac2, kind));
   }
 
   pub fn probe_request(&mut self, mac: MacAddress, ssid: Vec<u8>) {
@@ -161,14 +150,14 @@ impl Store {
     if let Some(ssid_list) = self.probes.get_mut(&mac) {
       if !ssid_list.contains(&ssid) {
         ssid_list.insert(ssid.clone());
-        self.sender.send(Event::ProbeRequest(mac, ssid)).unwrap();
+        self.buffer.push(Event::ProbeRequest(mac, ssid));
       }
     } else {
       // new list
       let mut ssid_list = HashSet::new();
       ssid_list.insert(ssid.clone());
       self.probes.insert(mac, ssid_list);
-      self.sender.send(Event::ProbeRequest(mac, ssid)).unwrap();
+      self.buffer.push(Event::ProbeRequest(mac, ssid));
     }
   }
 }

@@ -1,12 +1,8 @@
-use crate::{events::Event, packet_capture::CaptureType, websocket};
-use futures::{prelude::*, sync::mpsc::Receiver};
+use crate::{packet_capture::CaptureType, websocket};
 use http::Response;
 use hyper::Body;
 use log::info;
-use std::{
-  net::SocketAddr,
-  sync::{Arc, Mutex},
-};
+use std::net::SocketAddr;
 use tokio::prelude::*;
 use warp::{path::FullPath, Filter, Future, Reply};
 
@@ -20,11 +16,7 @@ pub fn start(addr: SocketAddr, capture_type: CaptureType) -> impl Future<Item = 
         let capture_type = capture_type.clone();
         ws.on_upgrade(move |ws| websocket::start(ws, capture_type))
       })
-      .or(warp::path::full().map(|path: FullPath| {
-        println!("{:#?}", path.as_str());
-
-        ParceljsResponder { path }
-      }));
+      .or(warp::path::full().map(|path| ParceljsResponder { path }));
 
     warp::serve(routes).bind(addr)
   })

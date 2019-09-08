@@ -24,7 +24,7 @@ pub fn get_live_capture(dev: Device) -> Result<Capture<Active>> {
     Capture::from_device(dev)?
       .immediate_mode(true)
       .promisc(true)
-      .timeout(1000)
+      // .timeout(1000)
       .open()?,
   )
 }

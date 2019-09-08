@@ -3,7 +3,7 @@ use log;
 use std::sync::Once;
 
 #[inline]
-pub fn initialize(debug: bool) {
+pub fn initialize(debug: bool, other_crates: bool) {
   static START: Once = Once::new();
 
   START.call_once(move || {
@@ -13,10 +13,18 @@ pub fn initialize(debug: bool) {
       log::LevelFilter::Info
     };
 
+    let my_crate_name = &env!("CARGO_PKG_NAME").replace("-", "_");
     env_logger::Builder::from_default_env()
       .default_format_timestamp(false)
       .default_format_module_path(false)
-      .filter(None, level) // &env!("CARGO_PKG_NAME").replace("-", "_")
+      .filter(
+        if other_crates {
+          None
+        } else {
+          Some(my_crate_name)
+        },
+        level,
+      )
       .init();
   });
 }

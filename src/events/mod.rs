@@ -4,7 +4,7 @@ mod util;
 pub use self::{store::*, util::*};
 use ieee80211::*;
 
-pub fn handle_frame(store: &mut Store, frame: &Frame) {
+pub fn handle_frame(store: &mut Store, frame: &Frame) -> Vec<Event> {
   let receiver_address = frame.receiver_address();
   store.add_address(receiver_address);
 
@@ -131,4 +131,6 @@ pub fn handle_frame(store: &mut Store, frame: &Frame) {
   }
 
   store.check_for_inactive();
+
+  store.flush_buffer()
 }

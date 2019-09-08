@@ -898,7 +898,7 @@ dependencies = [
 [[package]]
 name = "pcap"
 version = "0.7.0"
-source = "git+https://github.com/SpiralP/rust-pcap.git#a1474a7bce2e94c193fcd09e886fb82e1ba49f4a"
+source = "git+https://github.com/SpiralP/rust-pcap.git#73ddb3335b07fdc011f07b558923be307d11d831"
 dependencies = [
  "libc 0.2.62 (registry+https://github.com/rust-lang/crates.io-index)",
  "pcap-sys 0.1.0 (git+https://github.com/SpiralP/rust-pcap-sys.git)",
