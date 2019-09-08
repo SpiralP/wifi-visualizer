@@ -36,10 +36,15 @@ declare interface InactiveAddressFrameEvent extends FrameEventPrototype {
   type: "InactiveAddress";
   data: MacAddress[];
 }
+declare interface ErrorFrameEvent extends FrameEventPrototype {
+  type: "Error";
+  data: string;
+}
 
 declare type FrameEvent =
   | NewAddressFrameEvent
   | AccessPointFrameEvent
   | ConnectionFrameEvent
   | ProbeRequestFrameEvent
-  | InactiveAddressFrameEvent;
+  | InactiveAddressFrameEvent
+  | ErrorFrameEvent;
