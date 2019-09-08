@@ -6,7 +6,7 @@ import {
   status,
 } from "./helpers";
 import vis from "vis";
-import React from "react";
+import * as React from "react";
 import Websocket from "react-websocket";
 import oui from "./oui";
 import { Network } from "./Network";
