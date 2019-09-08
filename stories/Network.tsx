@@ -1,4 +1,4 @@
-import * as React from "react";
+import React from "react";
 
 import { storiesOf } from "@storybook/react";
 import { Network } from "../web/Network";
@@ -17,7 +17,7 @@ const toaster = Toaster.create();
 const randomColor = (() => {
   "use strict";
 
-  const randomInt = (min, max) => {
+  const randomInt = (min: number, max: number) => {
     return Math.floor(Math.random() * (max - min + 1)) + min;
   };
 
@@ -29,7 +29,7 @@ const randomColor = (() => {
   };
 })();
 
-function makeid(length) {
+function makeid(length: number) {
   var result = "";
   var characters = "ABCDEFGHIJKLMNOPQRSTUVWXYZ";
   var charactersLength = characters.length;
@@ -69,14 +69,14 @@ function makeNodes(n: number) {
   return o;
 }
 
-function makeEdgeName(a, b) {
+function makeEdgeName(a: string, b: string) {
   if (a > b) {
     return a + b;
   } else {
     return b + a;
   }
 }
-function makeEdge(nodes) {
+function makeEdge(nodes: string[]) {
   const from = nodes[Math.floor(Math.random() * nodes.length)];
   const to = nodes[Math.floor(Math.random() * nodes.length)];
 
@@ -89,7 +89,7 @@ function makeEdge(nodes) {
   };
 }
 
-function makeEdges(n, nodes) {
+function makeEdges(n: number, nodes: string[]) {
   const o = {};
   for (let index = 0; index < n; index++) {
     const edge = makeEdge(nodes);

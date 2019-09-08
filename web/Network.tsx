@@ -1,8 +1,12 @@
 import { iconNameToCode } from "./helpers";
-import copy from "clipboard-copy";
 import vis from "vis-network";
-import * as React from "react";
+import React from "react";
 import { IToaster } from "@blueprintjs/core";
+import copy from "clipboard-copy";
+
+if (!copy) {
+  throw new Error("WHAT");
+}
 
 interface NetworkProps {
   nodes: { [id: string]: vis.Node };
