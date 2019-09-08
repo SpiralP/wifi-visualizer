@@ -14,19 +14,22 @@ use warp::{
 pub fn start(ws: WebSocket, capture_type: CaptureType) -> impl Future<Item = (), Error = ()> {
   let (ws_sender, _ws_receiver) = ws.split();
 
-  // TODO somehow send errors through the websocket!
-  start_capture_event_stream(capture_type)
-    .and_then(move |event_stream| {
-      event_stream
-        .and_then(|event| serde_json::to_string(&event).map_err(Error::from))
-        .map(Message::text)
-        .forward(ws_sender)
-        .map(|_| ())
-    })
-    .map_err(|e| {
-      // ws.send(Message::text(String::from("HI")));
-      error!("websocket connection: {}", e)
-    })
+  start_capture_event_stream(capture_type).then(move |result| {
+    //
+    let ag: Box<dyn Stream<Item = Event, Error = Error> + Send> = match result {
+      Ok(event_stream) => Box::new(event_stream),
+      Err(e) => {
+        error!("{}", e);
+        Box::new(stream::once(Ok(Event::Error(format!("{}", e)))))
+      }
+    };
+
+    ag.and_then(|event| serde_json::to_string(&event).map_err(Error::from))
+      .map(Message::text)
+      .map_err(|e| error!("websocket: {}", e))
+      .forward(ws_sender.sink_map_err(|e| error!("websocket sink error: {}", e)))
+      .map(|_| ())
+  })
 }
 
 fn start_capture_event_stream(
@@ -37,10 +40,15 @@ fn start_capture_event_stream(
 
     packet_capture::start(capture_iterator).map(move |packet_data_stream| {
       packet_data_stream
-        .map(move |data| {
+        .and_then(move |data| {
           let frame = Frame::new(&data);
-          stream::iter_ok(handle_frame(&mut store, &frame))
+          handle_frame(&mut store, &frame)
         })
+        .map(stream::iter_ok)
+        .flatten()
+        .map(|item| vec![Ok::<_, Error>(item)])
+        .or_else(|e| Ok::<_, Error>(vec![Ok(Event::Error(format!("{}", e))), Err(e)]))
+        .map(stream::iter_result)
         .flatten()
     })
   })

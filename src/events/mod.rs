@@ -2,13 +2,16 @@ pub mod store;
 mod util;
 
 pub use self::{store::*, util::*};
+use crate::error::*;
 use ieee80211::*;
 
-pub fn handle_frame(store: &mut Store, frame: &Frame) -> Vec<Event> {
+pub fn handle_frame(store: &mut Store, frame: &Frame) -> Result<Vec<Event>> {
   let receiver_address = frame.receiver_address();
   store.add_address(receiver_address);
 
-  let layer = frame.next_layer().unwrap();
+  let layer = frame
+    .next_layer()
+    .ok_or_else(|| err_msg("frame.next_layer"))?;
 
   let transmitter_address;
   match layer {
@@ -47,7 +50,8 @@ pub fn handle_frame(store: &mut Store, frame: &Frame) -> Vec<Event> {
 
           store.change_connection(
             receiver_address,
-            transmitter_address.expect("no transmitter_address on authentication"),
+            transmitter_address
+              .ok_or_else(|| err_msg("no transmitter_address on authentication"))?,
             ConnectionType::Authentication,
           );
         }
@@ -59,7 +63,8 @@ pub fn handle_frame(store: &mut Store, frame: &Frame) -> Vec<Event> {
 
           store.change_connection(
             receiver_address,
-            transmitter_address.expect("no transmitter_address on disassociation"),
+            transmitter_address
+              .ok_or_else(|| err_msg("no transmitter_address on disassociation"))?,
             ConnectionType::Disassociated,
           );
         }
@@ -98,9 +103,9 @@ pub fn handle_frame(store: &mut Store, frame: &Frame) -> Vec<Event> {
           let tagged_parameters = beacon_frame.tagged_parameters();
 
           store.access_point(
-            transmitter_address.expect("no ta on Beacon"),
+            transmitter_address.ok_or_else(|| err_msg("no ta on Beacon"))?,
             AccessPointInfo {
-              ssid: tagged_parameters.ssid().unwrap(),
+              ssid: tagged_parameters.ssid().ok_or_else(|| err_msg("ssid"))?,
               channel: tagged_parameters.channel(),
             },
           );
@@ -110,18 +115,21 @@ pub fn handle_frame(store: &mut Store, frame: &Frame) -> Vec<Event> {
           let tagged_parameters = probe_response_frame.tagged_parameters();
 
           store.access_point(
-            transmitter_address.expect("no ta on ProbeResponse"),
+            transmitter_address.ok_or_else(|| err_msg("no ta on ProbeResponse"))?,
             AccessPointInfo {
-              ssid: tagged_parameters.ssid().unwrap(),
+              ssid: tagged_parameters.ssid().ok_or_else(|| err_msg("ssid"))?,
               channel: tagged_parameters.channel(),
             },
           );
         }
 
         ManagementFrameLayer::ProbeRequest(ref probe_request_frame) => {
-          let ssid = probe_request_frame.ssid().unwrap();
+          let ssid = probe_request_frame.ssid().ok_or_else(|| err_msg("ssid"))?;
           if !ssid.is_empty() {
-            store.probe_request(transmitter_address.expect("no ta on ProbeRequest"), ssid);
+            store.probe_request(
+              transmitter_address.ok_or_else(|| err_msg("no ta on ProbeRequest"))?,
+              ssid,
+            );
           }
         }
 
@@ -132,5 +140,5 @@ pub fn handle_frame(store: &mut Store, frame: &Frame) -> Vec<Event> {
 
   store.check_for_inactive();
 
-  store.flush_buffer()
+  Ok(store.flush_buffer())
 }

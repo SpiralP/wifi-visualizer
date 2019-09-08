@@ -16,6 +16,8 @@ pub enum Event {
   ProbeRequest(MacAddress, Vec<u8>), // from, ssid
 
   InactiveAddress(Vec<MacAddress>),
+
+  Error(String),
 }
 
 #[derive(Serialize, Debug, Clone, PartialEq)]
