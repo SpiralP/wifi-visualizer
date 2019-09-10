@@ -1,7 +1,7 @@
 use crate::{packet_capture::CaptureType, websocket};
 use http::Response;
 use hyper::Body;
-use log::info;
+use log::{debug, info};
 use std::net::SocketAddr;
 use tokio::prelude::*;
 use warp::{path::FullPath, Filter, Future, Reply};
@@ -19,7 +19,10 @@ pub fn start(addr: SocketAddr, capture_type: CaptureType) -> impl Future<Item = 
           future::ok(())
         })
       })
-      .or(warp::path::full().map(|path| ParceljsResponder { path }));
+      .or(warp::path::full().map(|path: FullPath| {
+        debug!("{}", path.as_str());
+        ParceljsResponder { path }
+      }));
 
     warp::serve(routes).bind(addr)
   })

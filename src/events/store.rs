@@ -34,25 +34,20 @@ pub enum ConnectionType {
   InRange,
 }
 
+#[derive(Default)]
 pub struct Store {
   addresses: HashMap<MacAddress, Timespec>,
   connections: HashMap<String, ConnectionType>,
   access_points: HashMap<MacAddress, AccessPointInfo>,
   probes: HashMap<MacAddress, HashSet<Vec<u8>>>,
+  last_sequence_number: HashMap<(MacAddress, MacAddress), HashMap<FrameSubtype, u16>>,
 
   buffer: Vec<Event>,
 }
 
 impl Store {
   pub fn new() -> Self {
-    Self {
-      addresses: HashMap::new(),
-      connections: HashMap::new(),
-      access_points: HashMap::new(),
-      probes: HashMap::new(),
-
-      buffer: Vec::new(),
-    }
+    Self::default()
   }
 
   pub fn flush_buffer(&mut self) -> Vec<Event> {
@@ -108,6 +103,101 @@ impl Store {
 
     self.access_points.insert(mac, info.clone());
     self.buffer.push(Event::AccessPoint(mac, info));
+  }
+
+  pub fn update_loss(
+    &mut self,
+    transmitter_address: Option<MacAddress>,
+    receiver_address: MacAddress,
+    layer: &FrameLayer,
+  ) {
+    use std::str::FromStr;
+
+    fn get_lost(from: u16, to: u16, retry: bool) -> u16 {
+      // TODO split data packets from the other types
+      // for beacons, use beacon interval and current time
+
+      if retry && from == to {
+        // real 2, retry 2
+        // retry 2, retry 2
+        return 0;
+      }
+
+      let lost = if to > from {
+        to - from - 1
+      } else if to < from {
+        // 4095 0 = 0
+        // 4095 1 = 1 (0)
+        // 4094 1 = 2 (4095, 0)
+
+        // 12 bit number, we wrapped around 4096, 0-4095
+        (4096 + to) - from - 1
+      } else {
+        // more likely to be a retransmission than a full cycle around 4096
+        0
+      };
+
+      if retry {
+        // real 2, retry 3 (lost real 3)
+        lost + 1
+      } else {
+        lost
+      }
+    }
+
+    let transmitter_address = if let Some(a) = transmitter_address {
+      a
+    } else {
+      return;
+    };
+
+    if transmitter_address != MacAddress::from_str("98-d6-f7-01-01-00").unwrap() {
+      return;
+    }
+
+    let frame = match &layer {
+      FrameLayer::Control(_) | FrameLayer::Management(_) => {
+        // Control frames don't have sequence numbers
+
+        // Management frames such as probes have weird start numbers
+        // also sometimes different types use the same number
+
+        return;
+      }
+
+      FrameLayer::Data(frame) => frame,
+    };
+
+    let frame_type = frame.subtype();
+    let sequence_number = frame.sequence_number();
+    let retry = frame.retry();
+
+    // {
+    //   "98-d6-f7-01-01-00": {
+    //     QoSData: 1,
+    //     Data: 3,
+    //   }
+    // }
+
+    let frame_types = self
+      .last_sequence_number
+      .entry((transmitter_address, receiver_address))
+      .or_insert_with(HashMap::new);
+
+    frame_types
+      .entry(frame_type)
+      .and_modify(move |old_sequence_number| {
+        if sequence_number != 0 {
+          let lost = get_lost(*old_sequence_number, sequence_number, retry);
+
+          if lost != 0 {
+            println!("{:?} {} lost {}", frame_type, sequence_number, lost);
+          }
+        }
+
+        *old_sequence_number = sequence_number;
+      })
+      .or_insert(sequence_number);
   }
 
   pub fn change_connection(&mut self, mac1: MacAddress, mac2: MacAddress, kind: ConnectionType) {

@@ -41,18 +41,16 @@ pub fn start(ws: WebSocket, capture_type: CaptureType) -> impl Future<Item = (),
 fn start_capture_event_stream(
   capture_type: CaptureType,
 ) -> impl Future<Item = impl Stream<Item = Event, Error = Error>, Error = Error> {
-  future::lazy(move || get_capture_iterator(capture_type)).and_then(|capture_iterator| {
+  future::lazy(move || get_capture_iterator(capture_type)).map(|capture_iterator| {
     let mut store = Store::new();
 
-    Ok(
-      stream::iter_result(capture_iterator)
-        .and_then(move |data| {
-          let frame = Frame::new(&data);
-          handle_frame(&mut store, &frame)
-        })
-        .map(stream::iter_ok)
-        .flatten()
-        .inject_before_error(|e| Event::Error(format!("{}", e))),
-    )
+    stream::iter_result(capture_iterator)
+      .and_then(move |data| {
+        let frame = Frame::new(&data);
+        handle_frame(&mut store, &frame)
+      })
+      .map(stream::iter_ok)
+      .flatten()
+      .inject_before_error(|e| Event::Error(format!("{}", e)))
   })
 }
