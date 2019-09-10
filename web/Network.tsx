@@ -57,7 +57,7 @@ export class Network extends React.PureComponent<NetworkProps, NetworkState> {
       }
     );
 
-    this.network.moveTo({ scale: 0.4 });
+    this.network.moveTo({ scale: 0.75 });
 
     this.network.on(
       "click",
