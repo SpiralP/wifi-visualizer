@@ -7,7 +7,7 @@
   "scripts": {
     "start": "cargo build --release && ./target/release/wifi-visualizer",
     "watch": "parcel web/index.html",
-    "build": "parcel build web/index.html",
+    "build": "parcel build --no-source-maps web/index.html",
     "setup": "sudo airmon-ng start wlan0 && sudo airodump-ng wlan0mon --channel 6",
     "storybook": "start-storybook -p 6006",
     "build-storybook": "build-storybook"

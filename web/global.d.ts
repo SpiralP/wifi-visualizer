@@ -32,20 +32,24 @@ declare interface ProbeRequestFrameEvent extends FrameEventPrototype {
   type: "ProbeRequest";
   data: [MacAddress, ByteArray];
 }
-declare interface InactiveAddressFrameEvent extends FrameEventPrototype {
-  type: "InactiveAddress";
-  data: MacAddress[];
+// declare interface InactiveAddressFrameEvent extends FrameEventPrototype {
+//   type: "InactiveAddress";
+//   data: MacAddress[];
+// }
+// declare interface LossFrameEvent extends FrameEventPrototype {
+//   type: "Loss";
+//   /**
+//    * addr, # lost, # received
+//    */
+//   data: [MacAddress, number, number];
+// }
+declare interface SignalEvent extends FrameEventPrototype {
+  type: "Signal";
+  data: [MacAddress, number];
 }
 declare interface ErrorFrameEvent extends FrameEventPrototype {
   type: "Error";
   data: string;
-}
-declare interface LossFrameEvent extends FrameEventPrototype {
-  type: "Loss";
-  /**
-   * addr, # lost, # received
-   */
-  data: [MacAddress, number, number];
 }
 
 declare type FrameEvent =
@@ -53,6 +57,7 @@ declare type FrameEvent =
   | AccessPointFrameEvent
   | ConnectionFrameEvent
   | ProbeRequestFrameEvent
-  | InactiveAddressFrameEvent
-  | LossFrameEvent
+  // | InactiveAddressFrameEvent
+  // | LossFrameEvent
+  | SignalEvent
   | ErrorFrameEvent;

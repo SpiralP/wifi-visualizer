@@ -66,20 +66,19 @@ export class App extends React.Component<AppProps, AppState> {
           ssid,
         ],
       });
-    } else if (event.type === "InactiveAddress") {
-      // const addrs = event.data;
-      // const changed: { [id: string]: AddressOptions } = {};
-      // addrs.forEach((id) => {
-      //   changed[id] = { ...this.state.addresses[id], icon: { size: 25 } };
-      // });
-      // this.setState({ addresses: { ...this.state.addresses, ...changed } });
-    } else if (event.type === "Loss") {
-      const [id, numLost, numReceived] = event.data;
+      // } else if (event.type === "Loss") {
+      //   const [id, numLost, numReceived] = event.data;
 
-      const loss = numLost / (numLost + numReceived);
+      //   const loss = numLost / (numLost + numReceived);
+
+      //   this.updateAddress(id, {
+      //     loss,
+      //   });
+    } else if (event.type === "Signal") {
+      const [id, signal] = event.data;
 
       this.updateAddress(id, {
-        loss,
+        signal,
       });
     } else if (event.type === "Error") {
       const error = event.data;

@@ -143,9 +143,18 @@ pub fn handle_frame(
     }
   }
 
-  store.update_loss(transmitter_address, receiver_address, &layer);
+  if let Some(transmitter_address) = transmitter_address {
+    if let Some(radiotap) = &frame_with_radiotap.radiotap {
+      if let Some(signal) = &radiotap.antenna_signal {
+        store.update_signal(transmitter_address, signal.value);
+      }
+    }
 
-  store.check_for_inactive();
+    store.update_frame_count(transmitter_address);
+  }
+
+  // store.update_loss(transmitter_address, receiver_address, &layer);
+  // store.check_for_inactive();
 
   Ok(store.flush_buffer())
 }

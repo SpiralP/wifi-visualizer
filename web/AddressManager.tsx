@@ -15,7 +15,9 @@ export interface AddressOptions {
 
   probeRequests?: Array<string>;
 
-  loss?: number;
+  // loss?: number;
+
+  signal?: number;
 }
 
 interface AddressManagerProps {
@@ -46,7 +48,7 @@ export default class AddressManager extends React.PureComponent<
   ) {
     // console.log(`AddressManager updateNetwork ${id}`);
 
-    const { accessPointInfo, loss } = address;
+    const { accessPointInfo, signal } = address;
 
     const known = ["98-d6-f7-01-01-00", "48-a4-72-1b-d3-43"];
 
@@ -60,7 +62,9 @@ export default class AddressManager extends React.PureComponent<
     const company = oui(id);
 
     let title = company ? `${company}<br />${id}` : id;
-    let label = loss ? `${Math.round(loss * 100)}% loss` : "";
+    let label = signal ? `${signal} dBm` : "";
+
+    const size = signal ? Math.max(100 + signal, 5) : 30;
 
     if (accessPointInfo) {
       const { ssidBytes, channel } = accessPointInfo;
@@ -76,7 +80,7 @@ export default class AddressManager extends React.PureComponent<
       label,
       icon: {
         code: companyToIconCode(company),
-        size: 50,
+        size,
         color,
       },
     };
