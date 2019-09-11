@@ -5,6 +5,15 @@ import vis from "vis-network";
 import { companyToIconCode, hashMacs, byteArrayToString } from "./helpers";
 import { oui } from "./oui";
 
+const known = ["98-d6-f7-01-01-00", "48-a4-72-1b-d3-43"];
+
+const connectionTypeToColor: { [kind: string]: string } = {
+  Associated: "blue",
+  Authentication: "green",
+  Disassociated: "red",
+  InRange: "grey",
+};
+
 export interface AddressOptions {
   connections?: { [id: string]: ConnectionType };
 
@@ -50,8 +59,6 @@ export default class AddressManager extends React.PureComponent<
 
     const { accessPointInfo, signal } = address;
 
-    const known = ["98-d6-f7-01-01-00", "48-a4-72-1b-d3-43"];
-
     const color =
       known.indexOf(id) !== -1
         ? "#ff00ff"
@@ -96,20 +103,8 @@ export default class AddressManager extends React.PureComponent<
         }
 
         const edgeId = hashMacs(id, otherId);
-
-        const color =
-          kind === "Associated"
-            ? "blue"
-            : kind === "Authentication"
-            ? "green"
-            : kind === "Disassociated"
-            ? "red"
-            : kind === "InRange"
-            ? "grey"
-            : "black";
-
+        const color = connectionTypeToColor[kind];
         const dashes = kind === "Disassociated" || kind === "InRange";
-
         const width = kind === "InRange" ? 0.1 : 3;
 
         edges[edgeId] = {
