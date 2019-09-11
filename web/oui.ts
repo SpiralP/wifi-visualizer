@@ -1,8 +1,10 @@
+import memoizee from "memoizee";
+
 const ouiData: {
   [s: string]: undefined | string | { [s: string]: undefined | string };
 } = require("./oui_data.json");
 
-export default function oui(mac: string): string | undefined {
+const oui = memoizee(function oui(mac: string): string | undefined {
   // mac in format 11-22-33-44-55-66
   const cleanMac = mac.replace(/[\: \-]/g, "").toUpperCase();
 
@@ -19,4 +21,6 @@ export default function oui(mac: string): string | undefined {
     }
     return;
   }
-}
+});
+
+export default oui;
