@@ -138,8 +138,6 @@ pub fn handle_frame(store: &mut Store, frame: &Frame) -> Result<Vec<Event>> {
     }
   }
 
-  // if let FrameLayer::Data(ref
-
   store.update_loss(transmitter_address, receiver_address, &layer);
 
   store.check_for_inactive();

@@ -8,7 +8,7 @@ import "@fortawesome/fontawesome-free/css/fontawesome.css";
 
 import React from "react";
 import { storiesOf } from "@storybook/react";
-import { Network } from "../web/Network";
+import Network from "../web/Network";
 import { Toaster } from "@blueprintjs/core";
 import { companyToIconCode, ouiToIconCode } from "../web/helpers";
 import { interpolateLab } from "d3-interpolate";

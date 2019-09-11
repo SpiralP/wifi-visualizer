@@ -40,6 +40,13 @@ declare interface ErrorFrameEvent extends FrameEventPrototype {
   type: "Error";
   data: string;
 }
+declare interface LossFrameEvent extends FrameEventPrototype {
+  type: "Loss";
+  /**
+   * addr, # lost, # received
+   */
+  data: [MacAddress, number, number];
+}
 
 declare type FrameEvent =
   | NewAddressFrameEvent
@@ -47,4 +54,5 @@ declare type FrameEvent =
   | ConnectionFrameEvent
   | ProbeRequestFrameEvent
   | InactiveAddressFrameEvent
+  | LossFrameEvent
   | ErrorFrameEvent;

@@ -4,10 +4,6 @@ import React from "react";
 import { IToaster } from "@blueprintjs/core";
 import copy from "clipboard-copy";
 
-if (!copy) {
-  throw new Error("WHAT");
-}
-
 interface NetworkProps {
   nodes: { [id: string]: vis.Node };
   edges: { [id: string]: vis.Edge };
@@ -16,7 +12,10 @@ interface NetworkProps {
 
 interface NetworkState {}
 
-export class Network extends React.PureComponent<NetworkProps, NetworkState> {
+export default class Network extends React.PureComponent<
+  NetworkProps,
+  NetworkState
+> {
   network?: vis.Network;
   nodes: vis.DataSet<vis.Node> = new vis.DataSet();
   edges: vis.DataSet<vis.Edge> = new vis.DataSet();
@@ -78,11 +77,6 @@ export class Network extends React.PureComponent<NetworkProps, NetworkState> {
       }
     );
 
-    // this.nodes.add({ id: "a" });
-    // this.nodes.add({ id: "b" });
-
-    // this.edges.add({ from: "a", to: "b", id: "ab" });
-
     // @ts-ignore
     window.edges = this.edges;
     // @ts-ignore
@@ -90,12 +84,12 @@ export class Network extends React.PureComponent<NetworkProps, NetworkState> {
     // @ts-ignore
     window.vis = vis;
 
-    Object.keys(this.props.nodes).forEach((key) => {
-      this.nodes.update(this.props.nodes[key]);
+    Object.entries(this.props.nodes).forEach(([id, node]) => {
+      this.updateNode(id, node);
     });
 
-    Object.keys(this.props.edges).forEach((key) => {
-      this.edges.update(this.props.edges[key]);
+    Object.entries(this.props.edges).forEach(([id, edge]) => {
+      this.updateEdge(id, edge);
     });
   } // componentDidMount
 
@@ -105,25 +99,44 @@ export class Network extends React.PureComponent<NetworkProps, NetworkState> {
     }
   }
 
-  componentDidUpdate(lastProps: NetworkProps) {
-    if (this.props.nodes !== lastProps.nodes) {
-      Object.keys(this.props.nodes)
-        .filter((key) => this.props.nodes[key] !== lastProps.nodes[key])
-        .forEach((key) => {
-          this.nodes.update(this.props.nodes[key]);
-        });
+  componentWillReceiveProps(nextProps: NetworkProps) {
+    console.log("Network componentWillReceiveProps", nextProps);
+
+    if (nextProps.nodes !== this.props.nodes) {
+      Object.entries(nextProps.nodes).forEach(([id, node]) => {
+        if (node !== this.props.nodes[id]) {
+          this.updateNode(id, node);
+        }
+      });
     }
 
-    if (this.props.edges !== lastProps.edges) {
-      Object.keys(this.props.edges)
-        .filter((key) => this.props.edges[key] !== lastProps.edges[key])
-        .forEach((key) => {
-          this.edges.update(this.props.edges[key]);
-        });
+    if (nextProps.edges !== this.props.edges) {
+      Object.entries(nextProps.edges).forEach(([id, edge]) => {
+        if (edge !== this.props.edges[id]) {
+          this.updateEdge(id, edge);
+        }
+      });
     }
   }
 
+  updateNode(id: string, node: vis.Node) {
+    console.log(`Network updateNode ${id}`);
+    node.id = id;
+    this.nodes.update(node);
+  }
+
+  updateEdge(id: string, edge: vis.Edge) {
+    console.log(`Network updateEdge ${id}`);
+    edge.id = id;
+    this.edges.update(edge);
+  }
+
+  // shouldComponentUpdate() {
+  //   return false;
+  // }
+
   render() {
+    console.log("Network render");
     return (
       <div
         style={{ height: "100vh", width: "100vw" }}

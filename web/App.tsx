@@ -1,15 +1,8 @@
 import { Intent, Alert, IToaster } from "@blueprintjs/core";
-import {
-  hashMacs,
-  companyToIconCode,
-  byteArrayToString,
-  status,
-} from "./helpers";
-import vis from "vis";
+import { byteArrayToString, status } from "./helpers";
 import React from "react";
 import Websocket from "react-websocket";
-import oui from "./oui";
-import { Network } from "./Network";
+import AddressManager, { AddressOptions } from "./AddressManager";
 
 interface AppProps {
   toaster: IToaster;
@@ -17,146 +10,77 @@ interface AppProps {
 
 interface AppState {
   connected: boolean;
-  nodes: { [id: string]: vis.Node };
-  edges: { [id: string]: vis.Edge };
+  addresses: { [id: string]: AddressOptions };
   error?: string;
 }
 
 export class App extends React.Component<AppProps, AppState> {
   state: AppState = {
     connected: false,
-    nodes: {},
-    edges: {},
+    addresses: {},
     error: undefined,
   };
 
   handleFrameEvent(event: FrameEvent) {
     if (event.type === "NewAddress") {
       const id = event.data;
-      const company = oui(id);
 
-      // console.log(id);
-      if (id === "98-d6-f7-01-01-00" || id == "48-a4-72-1b-d3-43") {
-        this.setState({
-          nodes: {
-            ...this.state.nodes,
-            [id]: {
-              id,
-              icon: {
-                code: companyToIconCode(company),
-                size: 50,
-                color: "#ff00ff",
-              },
-              title: company ? `${company}<br />${id}` : id,
-            },
-          },
-        });
-      } else {
-        this.setState({
-          nodes: {
-            ...this.state.nodes,
-            [id]: {
-              id,
-              icon: { code: companyToIconCode(company), size: 50 },
-              title: company ? `${company}<br />${id}` : id,
-            },
-          },
-        });
-      }
+      this.updateAddress(id, {});
     } else if (event.type === "AccessPoint") {
       const [id, info] = event.data;
-      const { ssid, channel } = info;
-      const label = byteArrayToString(ssid);
+      const { ssid: ssidBytes, channel } = info;
 
-      const node = this.state.nodes[id];
-      const lastTitle = node ? node.title : "";
-
-      this.setState({
-        nodes: {
-          ...this.state.nodes,
-          [id]: {
-            id,
-            icon: { color: "green" },
-            label,
-            title: `${lastTitle}<br />channel ${channel}`,
-          },
-        },
+      this.updateAddress(id, {
+        accessPointInfo: { ssidBytes, channel },
       });
     } else if (event.type === "Connection") {
       const [from, to, kind] = event.data;
-      const id = hashMacs(from, to);
 
-      if (kind === "Associated") {
-        this.setState({
-          edges: {
-            ...this.state.edges,
-            [id]: {
-              id,
-              from,
-              to,
-              color: { color: "blue", highlight: "blue", hover: "blue" },
-              dashes: false,
-              width: 3,
+      // TODO editing multiple
+      this.setState({
+        addresses: {
+          ...this.state.addresses,
+          [from]: {
+            ...this.state.addresses[from],
+            connections: {
+              ...this.state.addresses[from].connections,
+              [to]: kind,
             },
           },
-        });
-      } else if (kind === "Authentication") {
-        this.setState({
-          edges: {
-            ...this.state.edges,
-            [id]: {
-              id,
-              from,
-              to,
-              color: { color: "green", highlight: "green", hover: "green" },
-              dashes: false,
-              width: 3,
+          [to]: {
+            ...this.state.addresses[to],
+            connections: {
+              ...this.state.addresses[to].connections,
+              [from]: kind,
             },
           },
-        });
-      } else if (kind === "Disassociated") {
-        this.setState({
-          edges: {
-            ...this.state.edges,
-            [id]: {
-              id,
-              from,
-              to,
-              color: { color: "red", highlight: "red", hover: "red" },
-              dashes: true,
-              width: 3,
-            },
-          },
-        });
-      } else if (kind === "InRange") {
-        this.setState({
-          edges: {
-            ...this.state.edges,
-            [id]: {
-              id,
-              from,
-              to,
-              color: { color: "grey", highlight: "grey", hover: "grey" },
-              dashes: true,
-              width: 0.1,
-            },
-          },
-        });
-        // network.clusterByConnection(from);
-      }
+        },
+      });
     } else if (event.type === "ProbeRequest") {
-      const [from, ssidBytes] = event.data;
+      const [id, ssidBytes] = event.data;
       const ssid = byteArrayToString(ssidBytes);
 
-      const node = { ...this.state.nodes[from], label: ssid };
-      this.setState({ nodes: { ...this.state.nodes, [from]: node } });
-    } else if (event.type === "InactiveAddress") {
-      const addrs = event.data;
-      const changed = {};
-      addrs.forEach((id) => {
-        changed[id] = { ...this.state.nodes[id], icon: { size: 25 } };
+      this.updateAddress(id, {
+        probeRequests: [
+          ...(this.state.addresses[id].probeRequests || []),
+          ssid,
+        ],
       });
-      this.setState({ nodes: { ...this.state.nodes, ...changed } });
+    } else if (event.type === "InactiveAddress") {
+      // const addrs = event.data;
+      // const changed: { [id: string]: AddressOptions } = {};
+      // addrs.forEach((id) => {
+      //   changed[id] = { ...this.state.addresses[id], icon: { size: 25 } };
+      // });
+      // this.setState({ addresses: { ...this.state.addresses, ...changed } });
+    } else if (event.type === "Loss") {
+      const [id, numLost, numReceived] = event.data;
+
+      const loss = numLost / (numLost + numReceived);
+
+      this.updateAddress(id, {
+        loss,
+      });
     } else if (event.type === "Error") {
       const error = event.data;
       console.warn("Error", error);
@@ -166,14 +90,28 @@ export class App extends React.Component<AppProps, AppState> {
     }
   }
 
+  updateAddress(id: MacAddress, options: AddressOptions) {
+    this.setState({
+      addresses: {
+        ...this.state.addresses,
+        [id]: {
+          connections: {},
+          probeRequests: [],
+          ...this.state.addresses[id],
+          ...options,
+        },
+      },
+    });
+  }
+
   handleMessage(msg: string) {
-    const event: FrameEvent = JSON.parse(msg);
-    this.handleFrameEvent(event);
+    const events: Array<FrameEvent> = JSON.parse(msg);
+    events.forEach((event) => this.handleFrameEvent(event));
   }
 
   render() {
     const { toaster } = this.props;
-    const { nodes, edges, error } = this.state;
+    const { addresses, error } = this.state;
 
     return (
       <div>
@@ -192,7 +130,7 @@ export class App extends React.Component<AppProps, AppState> {
           </p>
         </Alert>
 
-        <Network nodes={nodes} edges={edges} toaster={toaster} />
+        <AddressManager addresses={addresses} toaster={toaster} />
         <Websocket
           url={`ws://${location.host}/ws`}
           onMessage={(msg: string) => this.handleMessage(msg)}

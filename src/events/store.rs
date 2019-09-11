@@ -1,5 +1,6 @@
 use super::*;
 use ieee80211::MacAddress;
+use log::debug;
 use serde_derive::*;
 use std::collections::{HashMap, HashSet};
 use time::{get_time, Timespec};
@@ -16,6 +17,8 @@ pub enum Event {
   ProbeRequest(MacAddress, Vec<u8>), // from, ssid
 
   InactiveAddress(Vec<MacAddress>),
+
+  Loss(MacAddress, u64, u64), // addr, # lost, # received
 
   Error(String),
 }
@@ -36,13 +39,15 @@ pub enum ConnectionType {
 
 #[derive(Default)]
 pub struct Store {
+  buffer: Vec<Event>,
+
   addresses: HashMap<MacAddress, Timespec>,
   connections: HashMap<String, ConnectionType>,
   access_points: HashMap<MacAddress, AccessPointInfo>,
   probes: HashMap<MacAddress, HashSet<Vec<u8>>>,
   last_sequence_number: HashMap<(MacAddress, MacAddress), HashMap<FrameSubtype, u16>>,
-
-  buffer: Vec<Event>,
+  data_frame_count: HashMap<MacAddress, u64>,
+  data_frame_loss_count: HashMap<MacAddress, u64>,
 }
 
 impl Store {
@@ -111,9 +116,7 @@ impl Store {
     receiver_address: MacAddress,
     layer: &FrameLayer,
   ) {
-    use std::str::FromStr;
-
-    fn get_lost(from: u16, to: u16, retry: bool) -> u16 {
+    fn get_loss(from: u16, to: u16, retry: bool) -> u16 {
       // TODO split data packets from the other types
       // for beacons, use beacon interval and current time
 
@@ -125,16 +128,13 @@ impl Store {
 
       let lost = if to > from {
         to - from - 1
-      } else if to < from {
+      } else {
         // 4095 0 = 0
         // 4095 1 = 1 (0)
         // 4094 1 = 2 (4095, 0)
 
         // 12 bit number, we wrapped around 4096, 0-4095
         (4096 + to) - from - 1
-      } else {
-        // more likely to be a retransmission than a full cycle around 4096
-        0
       };
 
       if retry {
@@ -143,16 +143,6 @@ impl Store {
       } else {
         lost
       }
-    }
-
-    let transmitter_address = if let Some(a) = transmitter_address {
-      a
-    } else {
-      return;
-    };
-
-    if transmitter_address != MacAddress::from_str("98-d6-f7-01-01-00").unwrap() {
-      return;
     }
 
     let frame = match &layer {
@@ -166,6 +156,18 @@ impl Store {
       }
 
       FrameLayer::Data(frame) => frame,
+    };
+
+    if let DSStatus::FromSTAToDS = frame.ds_status() {
+      // only clients, not access points
+    } else {
+      return;
+    }
+
+    let transmitter_address = if let Some(a) = transmitter_address {
+      a
+    } else {
+      return;
     };
 
     let frame_type = frame.subtype();
@@ -184,20 +186,65 @@ impl Store {
       .entry((transmitter_address, receiver_address))
       .or_insert_with(HashMap::new);
 
+    let data_frame_loss_count = self
+      .data_frame_loss_count
+      .entry(transmitter_address)
+      .or_insert(0);
+
     frame_types
       .entry(frame_type)
-      .and_modify(move |old_sequence_number| {
-        if sequence_number != 0 {
-          let lost = get_lost(*old_sequence_number, sequence_number, retry);
+      .and_modify(|ag| {
+        let old_sequence_number = *ag;
 
-          if lost != 0 {
-            println!("{:?} {} lost {}", frame_type, sequence_number, lost);
-          }
+        // TODO maybe have a set of all, then find all missing in the set in range min-max
+        // or just use -10 - -100 dBm from radiotap?
+
+        if retry && (sequence_number < old_sequence_number) {
+          // if the seq is lower than the previous and we're retry
+          // then we're retrying an old frame so who cares
+          return;
         }
 
-        *old_sequence_number = sequence_number;
+        *ag = sequence_number;
+
+        if sequence_number == 0 {
+          // could mark the beginning of the counter reset
+          return;
+        }
+
+        if retry {
+          // we can't trust getting loss from retry
+          // sometimes it goes like real 200, retry 400
+          return;
+        }
+
+        let lost = get_loss(old_sequence_number, sequence_number, retry);
+
+        if lost != 0 {
+          let lost: u64 = lost.into();
+
+          debug!(
+            "{:?} {} {} - {} lost {}",
+            frame_type, transmitter_address, old_sequence_number, sequence_number, lost
+          );
+
+          *data_frame_loss_count += lost
+        }
       })
       .or_insert(sequence_number);
+
+    let data_frame_count = self
+      .data_frame_count
+      .entry(transmitter_address)
+      .and_modify(|count| *count += 1)
+      .or_insert(1);
+
+    // TODO interval this so no spam
+    self.buffer.push(Event::Loss(
+      transmitter_address,
+      *data_frame_loss_count,
+      *data_frame_count,
+    ));
   }
 
   pub fn change_connection(&mut self, mac1: MacAddress, mac2: MacAddress, kind: ConnectionType) {
