@@ -3,7 +3,7 @@ import Network from "./Network";
 import { IToaster } from "@blueprintjs/core";
 import vis from "vis-network";
 import { companyToIconCode, hashMacs, byteArrayToString } from "./helpers";
-import oui from "./oui";
+import { oui } from "./oui";
 
 export interface AddressOptions {
   connections?: { [id: string]: ConnectionType };

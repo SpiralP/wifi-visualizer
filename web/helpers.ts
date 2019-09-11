@@ -1,13 +1,17 @@
 import jsesc from "jsesc";
+import memoizee from "memoizee";
 
-export function isBroadcast(mac: string): boolean {
+export const isBroadcast = memoizee(function isBroadcast(mac: string): boolean {
   return (parseInt(`${mac[0]}${mac[1]}`, 16) & 0b01) != 0;
-}
+});
 
-export function hashMacs(mac1: string, mac2: string): string {
+export const hashMacs = memoizee(function hashMacs(
+  mac1: string,
+  mac2: string
+): string {
   if (mac1 >= mac2) return `${mac1}${mac2}`;
   else return `${mac2}${mac1}`;
-}
+});
 
 const namedTimeouts = {};
 export function setNamedTimeout(
@@ -84,7 +88,9 @@ export const ouiToIconCode = {
   zte: iconNameToCode.android,
 };
 
-export function companyToIconCode(company?: string) {
+export const companyToIconCode = memoizee(function companyToIconCode(
+  company?: string
+) {
   if (company) {
     const iconCode = ouiToIconCode[company];
     if (iconCode) {
@@ -94,7 +100,7 @@ export function companyToIconCode(company?: string) {
     }
   }
   return iconNameToCode.circle;
-}
+});
 
 export async function connect(callback: (event: FrameEvent) => void) {
   const ws = new WebSocket(`ws://localhost:8001/`);
