@@ -1,10 +1,13 @@
 mod get_capture;
-mod strip_radiotap;
 
-use self::{get_capture::*, strip_radiotap::strip_radiotap};
+use self::get_capture::*;
 use crate::error::*;
+use bytes::Bytes;
+use ieee80211::Frame;
 use pcap::{linktypes, Activated, Capture, Error as PcapError};
+use radiotap::Radiotap;
 use std::{thread, time::Duration};
+use tokio::prelude::*;
 
 #[derive(Clone)]
 pub enum CaptureType {
@@ -13,7 +16,7 @@ pub enum CaptureType {
   Interface(String),
 }
 
-pub fn get_capture_iterator(capture_type: CaptureType) -> Result<CaptureIterator> {
+fn get_capture_iterator(capture_type: CaptureType) -> Result<CaptureIterator> {
   let mut sleep_playback = false;
 
   let capture = match capture_type {
@@ -29,6 +32,43 @@ pub fn get_capture_iterator(capture_type: CaptureType) -> Result<CaptureIterator
   };
 
   CaptureIterator::new(capture, sleep_playback)
+}
+
+pub struct FrameWithRadiotap {
+  pub frame: Frame,
+  pub radiotap: Option<Radiotap>,
+}
+
+pub fn get_capture_stream(
+  capture_type: CaptureType,
+) -> impl Future<Item = impl Stream<Item = FrameWithRadiotap, Error = Error>, Error = Error> {
+  future::lazy(move || get_capture_iterator(capture_type)).map(|capture_iterator| {
+    let is_radiotap = capture_iterator.is_radiotap;
+
+    stream::iter_result(capture_iterator).map(move |bytes| {
+      let (radiotap, bytes) = if is_radiotap {
+        let (radiotap, rest) = Radiotap::parse(&bytes).unwrap();
+
+        let has_fcs = radiotap.flags.map_or(false, |flags| flags.fcs);
+
+        let frame_bytes = if has_fcs {
+          // remove last 4 bytes (uint32_t)
+          let (data, _fcs) = rest.split_at(rest.len() - 4);
+          data
+        } else {
+          rest
+        };
+
+        (Some(radiotap), frame_bytes.into())
+      } else {
+        (None, bytes)
+      };
+
+      let frame = Frame::new(bytes);
+
+      FrameWithRadiotap { frame, radiotap }
+    })
+  })
 }
 
 pub struct CaptureIterator {
@@ -51,7 +91,7 @@ impl CaptureIterator {
           "bad datalink type {}",
           datalink
             .get_name()
-            .unwrap_or_else(|_| format!("(couldn't get_name for {})", datalink.0).to_string())
+            .unwrap_or_else(|_| format!("(couldn't datalink.get_name() for {})", datalink.0))
         );
       }
     };
@@ -66,7 +106,7 @@ impl CaptureIterator {
 }
 
 impl Iterator for CaptureIterator {
-  type Item = Result<Vec<u8>>;
+  type Item = Result<Bytes>;
 
   fn next(&mut self) -> Option<Self::Item> {
     match self.capture.next() {
@@ -83,13 +123,6 @@ impl Iterator for CaptureIterator {
       },
 
       Ok(ref packet) => {
-        // TODO move out of sniff thread
-        let data = if self.is_radiotap {
-          strip_radiotap(packet.data)
-        } else {
-          packet.data
-        };
-
         if self.sleep_playback {
           #[allow(clippy::cast_possible_truncation)]
           #[allow(clippy::cast_sign_loss)]
@@ -105,7 +138,7 @@ impl Iterator for CaptureIterator {
           self.maybe_last_time = Some(current_time);
         }
 
-        Some(Ok(data.to_vec()))
+        Some(Ok(Bytes::from(packet.data)))
       }
     }
   }

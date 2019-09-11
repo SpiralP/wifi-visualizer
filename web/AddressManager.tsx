@@ -39,43 +39,12 @@ export default class AddressManager extends React.PureComponent<
 
   updateNetwork(
     id: MacAddress,
+    lastAddress: AddressOptions,
     address: AddressOptions,
     nodes: { [id: string]: vis.Node },
     edges: { [id: string]: vis.Edge }
   ) {
-    console.log(`AddressManager updateNetwork ${id}`);
-
-    // } else if (kind === "Authentication") {
-
-    //         color: { color: "green", highlight: "green", hover: "green" },
-    //         dashes: false,
-    //         width: 3,
-    //       },
-    //     },
-    //   });
-    // } else if (kind === "Disassociated") {
-
-    //         color: { color: "red", highlight: "red", hover: "red" },
-    //         dashes: true,
-    //         width: 3,
-    //       },
-    //     },
-    //   });
-    // } else if (kind === "InRange") {
-
-    //         color: { color: "grey", highlight: "grey", hover: "grey" },
-    //         dashes: true,
-    //         width: 0.1,
-    //       },
-    //     },
-    //   });
-    //   // network.clusterByConnection(from);
-    // }
-    // probe
-    // const id = hashMacs(from, to);
-    // loss
-    // const interpolateColor = interpolateLab("#2B7CE9", "#FF0000");
-    // const color = interpolateColor(percentLoss);
+    // console.log(`AddressManager updateNetwork ${id}`);
 
     const { accessPointInfo, loss } = address;
 
@@ -112,8 +81,16 @@ export default class AddressManager extends React.PureComponent<
       },
     };
 
-    if (address.connections) {
+    if (
+      address.connections &&
+      address.connections !== lastAddress.connections
+    ) {
+      const lastConnections = lastAddress.connections;
       Object.entries(address.connections).forEach(([otherId, kind]) => {
+        if (lastConnections && kind === lastConnections[otherId]) {
+          return;
+        }
+
         const edgeId = hashMacs(id, otherId);
 
         const color =
@@ -143,20 +120,24 @@ export default class AddressManager extends React.PureComponent<
     }
   }
 
-  updateAddresses(addresses: { [id: string]: AddressOptions }) {
+  updateAddresses(
+    lastAddresses: { [id: string]: AddressOptions },
+    addresses: { [id: string]: AddressOptions }
+  ) {
     const { nodes: a, edges: b } = this.state;
     const nodes = { ...a };
     const edges = { ...b };
 
     Object.entries(addresses).forEach(([id, address]) => {
-      this.updateNetwork(id, address, nodes, edges);
+      const lastAddress = lastAddresses[id] || {};
+      this.updateNetwork(id, lastAddress, address, nodes, edges);
     });
 
     this.setState({ nodes, edges });
   }
 
   componentDidMount() {
-    this.updateAddresses(this.props.addresses);
+    this.updateAddresses({}, this.props.addresses);
   }
 
   componentWillReceiveProps(nextProps: AddressManagerProps) {
@@ -167,14 +148,14 @@ export default class AddressManager extends React.PureComponent<
           o[id] = address;
         }
       });
-      this.updateAddresses(o);
+      this.updateAddresses(this.props.addresses, o);
     }
   }
 
   render() {
     const { toaster } = this.props;
     const { nodes, edges } = this.state;
-    console.log("AddressManager render", nodes, edges);
+    // console.log("AddressManager render", nodes, edges);
 
     return <Network nodes={nodes} edges={edges} toaster={toaster} />;
   }

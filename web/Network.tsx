@@ -100,7 +100,7 @@ export default class Network extends React.PureComponent<
   }
 
   componentWillReceiveProps(nextProps: NetworkProps) {
-    console.log("Network componentWillReceiveProps", nextProps);
+    // console.log("Network componentWillReceiveProps", nextProps);
 
     if (nextProps.nodes !== this.props.nodes) {
       Object.entries(nextProps.nodes).forEach(([id, node]) => {
@@ -120,13 +120,14 @@ export default class Network extends React.PureComponent<
   }
 
   updateNode(id: string, node: vis.Node) {
-    console.log(`Network updateNode ${id}`);
+    // console.log(`Network updateNode ${id}`);
     node.id = id;
     this.nodes.update(node);
   }
 
   updateEdge(id: string, edge: vis.Edge) {
-    console.log(`Network updateEdge ${id}`);
+    // console.log(`Network updateEdge ${id}`);
+
     edge.id = id;
     this.edges.update(edge);
   }
@@ -136,7 +137,7 @@ export default class Network extends React.PureComponent<
   // }
 
   render() {
-    console.log("Network render");
+    // console.log("Network render");
     return (
       <div
         style={{ height: "100vh", width: "100vw" }}

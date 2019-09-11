@@ -28,6 +28,7 @@ warp = "0.1.19"
 hyper = "0.12.34"
 http = "0.1.18"
 futures = "0.1.29"
+bytes = "0.4.12"
 
 [target.'cfg(target_os = "linux")'.dependencies]
 caps = "0.3.3"

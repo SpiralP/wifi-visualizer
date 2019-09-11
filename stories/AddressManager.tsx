@@ -58,6 +58,10 @@ storiesOf("AddressManager", module)
           },
         };
 
+        for (let i = 0; i < 100; i++) {
+          addresses["" + i] = { connections: { ["" + (i - 1)]: "InRange" } };
+        }
+
         this.state = { addresses };
       }
 
@@ -81,9 +85,12 @@ storiesOf("AddressManager", module)
           await t(1000);
           a("98-d6-f7-01-01-00", { loss: 0.45 });
 
-          for (let i = 0; i < 100; i++) {
-            await t(10);
-            a("98-d6-f7-01-01-00", { loss: i / 100 });
+          for (let jkjk = 0; jkjk < 5; jkjk++) {
+            for (let i = 0; i < 100; i++) {
+              await t(10);
+              a("98-d6-f7-01-01-00", { loss: i / 100 });
+              a("98-d6-f7-01-01-01", { loss: i / 100 });
+            }
           }
         })();
       }
