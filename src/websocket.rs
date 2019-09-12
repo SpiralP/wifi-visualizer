@@ -12,21 +12,20 @@ pub fn start(ws: WebSocket, capture_type: CaptureType) -> impl Future<Item = (),
   let (ws_sender, _ws_receiver) = ws.split();
 
   start_capture_event_stream(capture_type)
-    .then(move |result| {
-      // check for pre-stream errors
-      // TODO don't do it this way
-      let events_stream: Box<dyn Stream<Item = Vec<Event>, Error = Error> + Send> = match result {
+    .then(|result| {
+      let events_stream: Box<dyn Stream<Item = Vec<Event>, Error = Error>> = match result {
         Ok(events_stream) => Box::new(events_stream),
-        Err(e) => {
-          error!("{}", e);
-          Box::new(stream::once(Ok(vec![Event::Error(format!("{}", e))])))
-        }
+        Err(e) => Box::new(stream::iter_result(vec![
+          Ok(vec![Event::Error(format!("{}", e))]),
+          Err(e),
+        ])),
       };
 
+      Ok(events_stream)
+    })
+    .and_then(move |events_stream| {
       events_stream
-        // .inspect(|events| {
-        //   trace!("{:?}", events);
-        // })
+        // .inspect(|events| trace!("{:?}", events))
         .and_then(|events| serde_json::to_string(&events).map_err(Error::from))
         .map(Message::text)
         .map_err(|e| error!("websocket: {}", e))
@@ -37,6 +36,15 @@ pub fn start(ws: WebSocket, capture_type: CaptureType) -> impl Future<Item = (),
       info!("websocket closed");
     })
 }
+// Box::new(stream::once(Ok(vec![Event::Error(format!("{}", e))])))
+
+// ws_receiver
+//   .for_each(|message| {
+//     println!("{:#?}", message);
+
+//     Ok(())
+//   })
+//   .map_err(|e| error!("websocket receiver: {}", e))
 
 fn start_capture_event_stream(
   capture_type: CaptureType,
