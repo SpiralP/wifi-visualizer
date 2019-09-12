@@ -1,4 +1,5 @@
 use crate::{packet_capture::CaptureType, websocket};
+use helpers::thread;
 use http::Response;
 use hyper::Body;
 use log::{debug, info};
@@ -15,12 +16,17 @@ pub fn start(addr: SocketAddr, capture_type: CaptureType) -> impl Future<Item = 
       .map(move |ws: warp::ws::Ws2| {
         let capture_type = capture_type.clone();
         ws.on_upgrade(move |ws| {
-          tokio::spawn(websocket::start(ws, capture_type));
+          // we don't want to use tokio here because iterator streams
+          // block the other http request futures by taking from the pool
+          thread::spawn("websocket future thread", move || {
+            websocket::start(ws, capture_type).wait().unwrap();
+          });
+
           future::ok(())
         })
       })
       .or(warp::path::full().map(|path: FullPath| {
-        debug!("{}", path.as_str());
+        debug!("http {}", path.as_str());
         ParceljsResponder { path }
       }));
 

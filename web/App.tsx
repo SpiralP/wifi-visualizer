@@ -80,6 +80,12 @@ export class App extends React.Component<AppProps, AppState> {
       this.updateAddress(id, {
         signal,
       });
+    } else if (event.type === "Rate") {
+      const [id, rate] = event.data;
+
+      this.updateAddress(id, {
+        rate,
+      });
     } else if (event.type === "Error") {
       const error = event.data;
       console.warn("Error", error);

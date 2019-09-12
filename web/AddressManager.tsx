@@ -27,6 +27,7 @@ export interface AddressOptions {
   // loss?: number;
 
   signal?: number;
+  rate?: number;
 }
 
 interface AddressManagerProps {
@@ -57,7 +58,7 @@ export default class AddressManager extends React.PureComponent<
   ) {
     // console.log(`AddressManager updateNetwork ${id}`);
 
-    const { accessPointInfo, signal } = address;
+    const { accessPointInfo, signal, rate } = address;
 
     const color =
       known.indexOf(id) !== -1
@@ -68,18 +69,26 @@ export default class AddressManager extends React.PureComponent<
 
     const company = oui(id);
 
-    let title = company ? `${company}<br />${id}` : id;
-    let label = signal ? `${signal} dBm` : "";
-
-    const size = signal ? Math.max(100 + signal, 5) : 30;
+    let label = "";
+    let title = company ? `${id} (${company})` : id;
 
     if (accessPointInfo) {
       const { ssidBytes, channel } = accessPointInfo;
       const ssid = byteArrayToString(ssidBytes);
 
-      label = ssid;
+      label += ssid;
       title += `<br />channel ${channel}`;
     }
+
+    if (signal) {
+      label += `\n${signal} dBm`;
+    }
+
+    if (rate) {
+      label += `\n${rate} pps`;
+    }
+
+    const size = signal ? Math.max(100 + signal, 5) : 30;
 
     nodes[id] = {
       id,

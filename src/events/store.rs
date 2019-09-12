@@ -2,7 +2,7 @@ use super::*;
 use ieee80211::MacAddress;
 use serde_derive::*;
 use std::collections::{HashMap, HashSet};
-use time::{get_time, Timespec};
+use time::{get_time, Duration, Timespec};
 
 #[derive(Serialize, Debug)]
 #[serde(tag = "type", content = "data")] // {type: "NewAddress", data: "aa:aa:aa"}
@@ -18,6 +18,8 @@ pub enum Event {
   // InactiveAddress(Vec<MacAddress>),
   // Loss(MacAddress, u64, u64), // addr, # lost, # received
   Signal(MacAddress, i8),
+
+  Rate(MacAddress, u64),
 
   Error(String),
 }
@@ -36,7 +38,6 @@ pub enum ConnectionType {
   InRange,
 }
 
-#[derive(Default)]
 pub struct Store {
   buffer: Vec<Event>,
 
@@ -47,12 +48,30 @@ pub struct Store {
   frame_count: HashMap<MacAddress, u64>,
   // last_sequence_number: HashMap<(MacAddress, MacAddress), HashMap<FrameSubtype, u16>>,
   // data_frame_loss_count: HashMap<MacAddress, u64>,
-  next_signal_event: HashMap<MacAddress, Timespec>,
+  next_signal_event_update: HashMap<MacAddress, Timespec>,
+  next_rate_event_update: HashMap<MacAddress, Timespec>,
+  rate_last_frame_count: HashMap<MacAddress, u64>,
+
+  signal_event_update_interval: Duration,
+  rate_event_update_interval: Duration,
 }
 
 impl Store {
   pub fn new() -> Self {
-    Self::default()
+    Self {
+      buffer: Vec::new(),
+      addresses: HashMap::new(),
+      connections: HashMap::new(),
+      access_points: HashMap::new(),
+      probes: HashMap::new(),
+      frame_count: HashMap::new(),
+      next_signal_event_update: HashMap::new(),
+      next_rate_event_update: HashMap::new(),
+      rate_last_frame_count: HashMap::new(),
+
+      signal_event_update_interval: Duration::seconds(1),
+      rate_event_update_interval: Duration::seconds(1),
+    }
   }
 
   pub fn flush_buffer(&mut self) -> Vec<Event> {
@@ -64,7 +83,7 @@ impl Store {
 
   //   let now = get_time();
   //   for (a, b) in &self.addresses {
-  //     if (now - *b) > time::Duration::seconds(5) {
+  //     if (now - *b) > self.todo {
   //       macs_to_remove.push(*a);
   //     }
   //   }
@@ -233,7 +252,7 @@ impl Store {
   //     })
   //     .or_insert(sequence_number);
 
-  //   let data_frame_count = self
+  //   let data_frame_count_todo_this_is_the_old_number = self
   //     .data_frame_count
   //     .entry(transmitter_address)
   //     .and_modify(|count| *count += 1)
@@ -300,26 +319,53 @@ impl Store {
     }
   }
 
-  pub fn update_frame_count(&mut self, transmitter_address: MacAddress) {
-    self
-      .frame_count
-      .entry(transmitter_address)
-      .and_modify(|count| *count += 1)
-      .or_insert(1);
-  }
-
-  pub fn update_signal(&mut self, mac: MacAddress, signal: i8) {
+  pub fn update_signal(&mut self, transmitter_address: MacAddress, signal: i8) {
     let now = get_time();
 
-    if let Some(next_time) = self.next_signal_event.get(&mac) {
+    if let Some(next_time) = self.next_signal_event_update.get(&transmitter_address) {
       if now < *next_time {
         // not yet
         return;
       }
     }
 
-    let delay = time::Duration::seconds(1);
-    self.next_signal_event.insert(mac, now + delay);
-    self.buffer.push(Event::Signal(mac, signal));
+    self
+      .next_signal_event_update
+      .insert(transmitter_address, now + self.signal_event_update_interval);
+    self.buffer.push(Event::Signal(transmitter_address, signal));
+  }
+
+  pub fn update_rate(&mut self, transmitter_address: MacAddress) {
+    let frame_count = *self
+      .frame_count
+      .entry(transmitter_address)
+      .and_modify(move |frame_count| *frame_count += 1)
+      .or_insert(1);
+
+    let now = get_time();
+
+    if let Some(next_time) = self.next_rate_event_update.get(&transmitter_address) {
+      if now < *next_time {
+        // not yet
+        return;
+      }
+    }
+
+    let last_frame_count =
+      if let Some(last_frame_count) = self.rate_last_frame_count.get_mut(&transmitter_address) {
+        let ag = *last_frame_count;
+        *last_frame_count = frame_count;
+        ag
+      } else {
+        0
+      };
+
+    let rate = frame_count - last_frame_count;
+
+    self
+      .next_rate_event_update
+      .insert(transmitter_address, now + self.rate_event_update_interval);
+
+    self.buffer.push(Event::Rate(transmitter_address, rate));
   }
 }

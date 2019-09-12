@@ -5,6 +5,7 @@ pub use self::{store::*, util::*};
 use crate::{error::*, packet_capture::FrameWithRadiotap};
 use ieee80211::*;
 
+#[allow(clippy::too_many_lines)]
 pub fn handle_frame(
   store: &mut Store,
   frame_with_radiotap: &FrameWithRadiotap,
@@ -144,13 +145,13 @@ pub fn handle_frame(
   }
 
   if let Some(transmitter_address) = transmitter_address {
+    store.update_rate(transmitter_address);
+
     if let Some(radiotap) = &frame_with_radiotap.radiotap {
       if let Some(signal) = &radiotap.antenna_signal {
         store.update_signal(transmitter_address, signal.value);
       }
     }
-
-    store.update_frame_count(transmitter_address);
   }
 
   // store.update_loss(transmitter_address, receiver_address, &layer);

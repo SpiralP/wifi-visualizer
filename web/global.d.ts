@@ -47,6 +47,10 @@ declare interface SignalEvent extends FrameEventPrototype {
   type: "Signal";
   data: [MacAddress, number];
 }
+declare interface RateEvent extends FrameEventPrototype {
+  type: "Rate";
+  data: [MacAddress, number];
+}
 declare interface ErrorFrameEvent extends FrameEventPrototype {
   type: "Error";
   data: string;
@@ -60,4 +64,5 @@ declare type FrameEvent =
   // | InactiveAddressFrameEvent
   // | LossFrameEvent
   | SignalEvent
+  | RateEvent
   | ErrorFrameEvent;
