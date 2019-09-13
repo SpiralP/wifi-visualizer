@@ -144,7 +144,7 @@ export default class AddressView extends React.Component<
               addresses={addresses}
               toaster={toaster}
               onAddressHover={(id, hovered) => {
-                console.log("hover", id);
+                console.log("hovered", id, hovered);
                 this.updateAddress(id, { hovered });
               }}
             />

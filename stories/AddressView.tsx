@@ -12,7 +12,7 @@ import AddressView from "../web/AddressView";
 import { Toaster } from "@blueprintjs/core";
 import { FrameEvent } from "../web/interfaceTypes";
 
-const toaster = Toaster.create();
+const toaster = Toaster.create({ position: "top-right" });
 
 storiesOf("AddressView", module)
   .addParameters({ options: { showPanel: false } })
@@ -99,6 +99,16 @@ storiesOf("AddressView", module)
               {
                 type: "Connection",
                 data: ["98-d6-f7-01-01-01", "98-d6-f7-01-01-03", "InRange"],
+              },
+              {
+                type: "AccessPoint",
+                data: [
+                  "98-d6-f7-01-01-03",
+                  {
+                    channel: 1,
+                    ssid: Buffer.from("ssid hello2").toJSON().data,
+                  },
+                ],
               },
             ];
 

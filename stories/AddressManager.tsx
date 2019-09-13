@@ -11,7 +11,7 @@ import { storiesOf } from "@storybook/react";
 import AddressNetwork, { AddressOptions } from "../web/AddressNetwork";
 import { Toaster } from "@blueprintjs/core";
 
-const toaster = Toaster.create();
+const toaster = Toaster.create({ position: "top-right" });
 
 storiesOf("AddressNetwork", module)
   .addParameters({ options: { showPanel: false } })

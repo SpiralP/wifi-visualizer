@@ -52,10 +52,14 @@ function AccessPointsTable({
             <tr
               key={id}
               onMouseEnter={() => {
+                // console.log("mouse enter");
                 onAddressHover(id, true);
               }}
               onMouseLeave={() => {
-                onAddressHover(id, false);
+                // console.log("mouse leave");
+                setTimeout(() => {
+                  onAddressHover(id, false);
+                }, 1);
               }}
             >
               <td>{signal}</td>
@@ -100,7 +104,9 @@ function StationsTable({
                 onAddressHover(id, true);
               }}
               onMouseLeave={() => {
-                onAddressHover(id, false);
+                setTimeout(() => {
+                  onAddressHover(id, false);
+                }, 1);
               }}
             >
               <td>{signal}</td>

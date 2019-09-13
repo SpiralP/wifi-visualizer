@@ -13,7 +13,7 @@ import { Toaster } from "@blueprintjs/core";
 import { companyToIconCode, ouiToIconCode } from "../web/helpers";
 import { interpolateLab } from "d3-interpolate";
 
-const toaster = Toaster.create();
+const toaster = Toaster.create({ position: "top-right" });
 
 const randomColor = (() => {
   "use strict";

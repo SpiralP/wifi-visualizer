@@ -12,7 +12,7 @@ import AddressList from "../web/AddressList";
 import { AddressOptions } from "../web/AddressNetwork";
 import { Toaster } from "@blueprintjs/core";
 
-const toaster = Toaster.create();
+const toaster = Toaster.create({ position: "top-right" });
 
 storiesOf("AddressList", module)
   .addParameters({ options: { showPanel: false } })

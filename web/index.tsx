@@ -25,7 +25,7 @@ status("index.tsx");
 
 const root = document.getElementById("root");
 if (root) {
-  const toaster = Toaster.create({ position: "top-left" });
+  const toaster = Toaster.create({ position: "top-right" });
   ReactDOM.render(<App toaster={toaster} />, root);
 } else {
   console.error("no root element!");

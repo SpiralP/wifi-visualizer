@@ -1,5 +1,6 @@
 import jsesc from "jsesc";
 import memoizee from "memoizee";
+import { FrameEvent, ByteArray } from "./interfaceTypes";
 
 export const isBroadcast = memoizee(function isBroadcast(mac: string): boolean {
   return (parseInt(`${mac[0]}${mac[1]}`, 16) & 0b01) != 0;
