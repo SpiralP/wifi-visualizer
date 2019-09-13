@@ -8,31 +8,41 @@ import "@fortawesome/fontawesome-free/css/fontawesome.css";
 
 import React from "react";
 import { storiesOf } from "@storybook/react";
-import AddressManager, { AddressOptions } from "../web/AddressManager";
+import AddressNetwork, { AddressOptions } from "../web/AddressNetwork";
 import { Toaster } from "@blueprintjs/core";
 
 const toaster = Toaster.create();
 
-storiesOf("AddressManager", module)
+storiesOf("AddressNetwork", module)
   .addParameters({ options: { showPanel: false } })
   .add("With Data", () => {
     const addresses: { [id: string]: AddressOptions } = {
       ["98-d6-f7-01-01-00"]: {
         connections: { ["98-d6-f7-01-01-02"]: "InRange" },
+        signal: -20,
       },
       ["98-d6-f7-01-01-01"]: {
+        connections: { ["98-d6-f7-01-01-02"]: "Associated" },
+        signal: -10,
+      },
+      ["98-d6-f7-01-01-04"]: {
+        connections: { ["98-d6-f7-01-01-02"]: "Associated" },
+        signal: -10,
+      },
+      ["98-d6-f7-01-01-03"]: {
         connections: { ["98-d6-f7-01-01-02"]: "Associated" },
       },
       ["98-d6-f7-01-01-02"]: {
         accessPointInfo: {
           channel: 1,
-          ssidBytes: Buffer.from("ssid hello").toJSON().data,
+          ssid: "ssid hello",
         },
         connections: { ["98-d6-f7-01-01-01"]: "Associated" },
+        signal: -80,
       },
     };
 
-    return <AddressManager addresses={addresses} toaster={toaster} />;
+    return <AddressNetwork addresses={addresses} toaster={toaster} />;
   })
   .add("Changing", () => {
     class Changing extends React.PureComponent<
@@ -52,7 +62,7 @@ storiesOf("AddressManager", module)
           ["98-d6-f7-01-01-02"]: {
             accessPointInfo: {
               channel: 1,
-              ssidBytes: Buffer.from("ssid hello").toJSON().data,
+              ssid: "ssid hello",
             },
             connections: { ["98-d6-f7-01-01-01"]: "Associated" },
           },
@@ -83,13 +93,13 @@ storiesOf("AddressManager", module)
 
         (async () => {
           await t(1000);
-          a("98-d6-f7-01-01-00", { loss: 0.45 });
+          a("98-d6-f7-01-01-00", { signal: -20 });
 
           for (let jkjk = 0; jkjk < 5; jkjk++) {
-            for (let i = 0; i < 100; i++) {
+            for (let i = 10; i < 100; i++) {
               await t(10);
-              a("98-d6-f7-01-01-00", { loss: i / 100 });
-              a("98-d6-f7-01-01-01", { loss: i / 100 });
+              a("98-d6-f7-01-01-00", { signal: -1 * i });
+              a("98-d6-f7-01-01-01", { signal: -1 * i });
             }
           }
         })();
@@ -97,7 +107,7 @@ storiesOf("AddressManager", module)
 
       render() {
         return (
-          <AddressManager addresses={this.state.addresses} toaster={toaster} />
+          <AddressNetwork addresses={this.state.addresses} toaster={toaster} />
         );
       }
     }

@@ -2,8 +2,9 @@ import React from "react";
 import Network from "./Network";
 import { IToaster } from "@blueprintjs/core";
 import vis from "vis-network";
-import { companyToIconCode, hashMacs, byteArrayToString } from "./helpers";
+import { companyToIconCode, hashMacs } from "./helpers";
 import { oui } from "./oui";
+import { ConnectionType, MacAddress } from "./interfaceTypes";
 
 const known = ["98-d6-f7-01-01-00", "48-a4-72-1b-d3-43"];
 
@@ -18,7 +19,7 @@ export interface AddressOptions {
   connections?: { [id: string]: ConnectionType };
 
   accessPointInfo?: {
-    ssidBytes: Array<number>;
+    ssid: string;
     channel?: number;
   };
 
@@ -28,23 +29,25 @@ export interface AddressOptions {
 
   signal?: number;
   rate?: number;
+
+  hovered?: boolean;
 }
 
-interface AddressManagerProps {
+interface AddressNetworkProps {
   addresses: { [id: string]: AddressOptions };
   toaster: IToaster;
 }
 
-interface AddressManagerState {
+interface AddressNetworkState {
   nodes: { [id: string]: vis.Node };
   edges: { [id: string]: vis.Edge };
 }
 
-export default class AddressManager extends React.PureComponent<
-  AddressManagerProps,
-  AddressManagerState
+export default class AddressNetwork extends React.PureComponent<
+  AddressNetworkProps,
+  AddressNetworkState
 > {
-  state: AddressManagerState = {
+  state: AddressNetworkState = {
     nodes: {},
     edges: {},
   };
@@ -58,7 +61,7 @@ export default class AddressManager extends React.PureComponent<
   ) {
     // console.log(`AddressManager updateNetwork ${id}`);
 
-    const { accessPointInfo, signal, rate } = address;
+    const { accessPointInfo, signal, rate, hovered } = address;
 
     const color =
       known.indexOf(id) !== -1
@@ -73,8 +76,7 @@ export default class AddressManager extends React.PureComponent<
     let title = company ? `${id} (${company})` : id;
 
     if (accessPointInfo) {
-      const { ssidBytes, channel } = accessPointInfo;
-      const ssid = byteArrayToString(ssidBytes);
+      const { ssid, channel } = accessPointInfo;
 
       label += ssid;
       title += `<br />channel ${channel}`;
@@ -88,7 +90,7 @@ export default class AddressManager extends React.PureComponent<
       label += `\n${rate} pps`;
     }
 
-    const size = signal ? Math.max(100 + signal, 5) : 30;
+    const size = hovered ? 100 : signal ? Math.max(100 + signal, 5) : 30;
 
     nodes[id] = {
       id,
@@ -148,7 +150,7 @@ export default class AddressManager extends React.PureComponent<
     this.updateAddresses({}, this.props.addresses);
   }
 
-  componentWillReceiveProps(nextProps: AddressManagerProps) {
+  componentWillReceiveProps(nextProps: AddressNetworkProps) {
     if (nextProps.addresses !== this.props.addresses) {
       const o = {};
       Object.entries(nextProps.addresses).forEach(([id, address]) => {
@@ -164,7 +166,7 @@ export default class AddressManager extends React.PureComponent<
     const { toaster } = this.props;
     const { nodes, edges } = this.state;
     // console.log("AddressManager render", nodes, edges);
-
+    // display: "flex", flexDirection: "row"
     return <Network nodes={nodes} edges={edges} toaster={toaster} />;
   }
 }

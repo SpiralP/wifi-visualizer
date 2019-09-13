@@ -19,7 +19,7 @@ pub fn start(addr: SocketAddr, capture_type: CaptureType) -> impl Future<Item = 
           // we don't want to use tokio here because iterator streams
           // block the other http request futures by taking from the pool
           thread::spawn("websocket future thread", move || {
-            websocket::start(ws, capture_type).wait().unwrap();
+            let _ = websocket::start(ws, capture_type).wait();
           });
 
           future::ok(())
