@@ -42,6 +42,13 @@ fn start_capture_event_stream(
 
     capture_stream
       .and_then(move |frame_with_radiotap| handle_frame(&mut store, &frame_with_radiotap))
+      .then(|result| match result {
+        Ok(_) => result,
+        Err(e) => {
+          error!("packet parse error: {:?}", e);
+          Ok(vec![])
+        }
+      })
       .filter(|events| !events.is_empty())
   })
 }

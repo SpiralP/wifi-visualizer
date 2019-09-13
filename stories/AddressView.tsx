@@ -47,73 +47,70 @@ storiesOf("AddressView", module)
       <AddressView
         toaster={toaster}
         ref={(addressView) => {
-          // must delay because can't setState multiples times in ref callback
-          setTimeout(() => {
-            if (!addressView) {
-              throw new Error("no ref addressView?");
-            }
+          if (!addressView) {
+            throw new Error("no ref addressView?");
+          }
 
-            const events: Array<FrameEvent> = [
-              {
-                type: "NewAddress",
-                data: "98-d6-f7-01-01-00",
-              },
-              {
-                type: "NewAddress",
-                data: "98-d6-f7-01-01-01",
-              },
-              {
-                type: "NewAddress",
-                data: "98-d6-f7-01-01-02",
-              },
-              {
-                type: "NewAddress",
-                data: "98-d6-f7-01-01-03",
-              },
-              {
-                type: "Signal",
-                data: ["98-d6-f7-01-01-00", -20],
-              },
-              {
-                type: "Signal",
-                data: ["98-d6-f7-01-01-01", -10],
-              },
-              {
-                type: "AccessPoint",
-                data: [
-                  "98-d6-f7-01-01-02",
-                  {
-                    channel: 1,
-                    ssid: Buffer.from("ssid hello").toJSON().data,
-                  },
-                ],
-              },
-              {
-                type: "Connection",
-                data: ["98-d6-f7-01-01-00", "98-d6-f7-01-01-02", "InRange"],
-              },
-              {
-                type: "Connection",
-                data: ["98-d6-f7-01-01-01", "98-d6-f7-01-01-02", "Associated"],
-              },
-              {
-                type: "Connection",
-                data: ["98-d6-f7-01-01-01", "98-d6-f7-01-01-03", "InRange"],
-              },
-              {
-                type: "AccessPoint",
-                data: [
-                  "98-d6-f7-01-01-03",
-                  {
-                    channel: 1,
-                    ssid: Buffer.from("ssid hello2").toJSON().data,
-                  },
-                ],
-              },
-            ];
+          const events: Array<FrameEvent> = [
+            {
+              type: "NewAddress",
+              data: "98-d6-f7-01-01-00",
+            },
+            {
+              type: "NewAddress",
+              data: "98-d6-f7-01-01-01",
+            },
+            {
+              type: "NewAddress",
+              data: "98-d6-f7-01-01-02",
+            },
+            {
+              type: "NewAddress",
+              data: "98-d6-f7-01-01-03",
+            },
+            {
+              type: "Signal",
+              data: ["98-d6-f7-01-01-00", -20],
+            },
+            {
+              type: "Signal",
+              data: ["98-d6-f7-01-01-01", -10],
+            },
+            {
+              type: "AccessPoint",
+              data: [
+                "98-d6-f7-01-01-02",
+                {
+                  channel: 1,
+                  ssid: Buffer.from("ssid hello").toJSON().data,
+                },
+              ],
+            },
+            {
+              type: "Connection",
+              data: ["98-d6-f7-01-01-00", "98-d6-f7-01-01-02", "InRange"],
+            },
+            {
+              type: "Connection",
+              data: ["98-d6-f7-01-01-01", "98-d6-f7-01-01-02", "Associated"],
+            },
+            {
+              type: "Connection",
+              data: ["98-d6-f7-01-01-01", "98-d6-f7-01-01-03", "InRange"],
+            },
+            {
+              type: "AccessPoint",
+              data: [
+                "98-d6-f7-01-01-03",
+                {
+                  channel: 1,
+                  ssid: Buffer.from("ssid hello2").toJSON().data,
+                },
+              ],
+            },
+          ];
 
-            events.forEach((event) => addressView.handleFrameEvent(event));
-          }, 100);
+          events.forEach((event) => addressView.handleFrameEvent(event));
         }}
       />
     );

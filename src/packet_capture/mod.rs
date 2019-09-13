@@ -35,6 +35,7 @@ fn get_capture_iterator(capture_type: CaptureType) -> Result<CaptureIterator> {
 }
 
 pub struct FrameWithRadiotap {
+  pub id: u64,
   pub frame: Frame,
   pub radiotap: Option<Radiotap>,
 }
@@ -44,6 +45,8 @@ pub fn get_capture_stream(
 ) -> impl Future<Item = impl Stream<Item = FrameWithRadiotap, Error = Error>, Error = Error> {
   future::lazy(move || get_capture_iterator(capture_type)).map(|capture_iterator| {
     let is_radiotap = capture_iterator.is_radiotap;
+
+    let mut id = 0;
 
     stream::iter_result(capture_iterator).map(move |bytes| {
       let (radiotap, bytes) = if is_radiotap {
@@ -65,8 +68,13 @@ pub fn get_capture_stream(
       };
 
       let frame = Frame::new(bytes);
+      id += 1;
 
-      FrameWithRadiotap { frame, radiotap }
+      FrameWithRadiotap {
+        id,
+        frame,
+        radiotap,
+      }
     })
   })
 }

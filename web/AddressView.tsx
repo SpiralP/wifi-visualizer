@@ -27,7 +27,7 @@ export default class AddressView extends React.Component<
   };
 
   public handleFrameEvent(event: FrameEvent) {
-    console.log(`handleFrameEvent`, event);
+    // console.log(`handleFrameEvent`, event);
 
     if (event.type === "NewAddress") {
       const id = event.data;
@@ -45,25 +45,25 @@ export default class AddressView extends React.Component<
       const [from, to, kind] = event.data;
 
       // TODO editing multiple
-      this.setState({
+      this.setState((lastState) => ({
         addresses: {
-          ...this.state.addresses,
+          ...lastState.addresses,
           [from]: {
-            ...this.state.addresses[from],
+            ...lastState.addresses[from],
             connections: {
-              ...this.state.addresses[from].connections,
+              ...lastState.addresses[from].connections,
               [to]: kind,
             },
           },
           [to]: {
-            ...this.state.addresses[to],
+            ...lastState.addresses[to],
             connections: {
-              ...this.state.addresses[to].connections,
+              ...lastState.addresses[to].connections,
               [from]: kind,
             },
           },
         },
-      });
+      }));
     } else if (event.type === "ProbeRequest") {
       const [id, ssidBytes] = event.data;
       const ssid = byteArrayToString(ssidBytes);
@@ -104,17 +104,17 @@ export default class AddressView extends React.Component<
   }
 
   updateAddress(id: MacAddress, options: AddressOptions) {
-    this.setState({
+    this.setState((lastState) => ({
       addresses: {
-        ...this.state.addresses,
+        ...lastState.addresses,
         [id]: {
           connections: {},
           probeRequests: [],
-          ...this.state.addresses[id],
+          ...lastState.addresses[id],
           ...options,
         },
       },
-    });
+    }));
   }
 
   render() {
@@ -144,7 +144,7 @@ export default class AddressView extends React.Component<
               addresses={addresses}
               toaster={toaster}
               onAddressHover={(id, hovered) => {
-                console.log("hovered", id, hovered);
+                // console.log("hovered", id, hovered);
                 this.updateAddress(id, { hovered });
               }}
             />

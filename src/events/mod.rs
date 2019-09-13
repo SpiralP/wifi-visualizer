@@ -106,7 +106,7 @@ pub fn handle_frame(
     if let Some(management_frame_layer) = management_frame.next_layer() {
       match management_frame_layer {
         ManagementFrameLayer::Beacon(ref beacon_frame) => {
-          let tagged_parameters = beacon_frame.tagged_parameters();
+          let tagged_parameters = beacon_frame.tagged_parameters()?;
 
           store.access_point(
             transmitter_address.ok_or_else(|| err_msg("no ta on Beacon"))?,
@@ -118,7 +118,7 @@ pub fn handle_frame(
         }
 
         ManagementFrameLayer::ProbeResponse(ref probe_response_frame) => {
-          let tagged_parameters = probe_response_frame.tagged_parameters();
+          let tagged_parameters = probe_response_frame.tagged_parameters()?;
 
           store.access_point(
             transmitter_address.ok_or_else(|| err_msg("no ta on ProbeResponse"))?,
@@ -130,7 +130,9 @@ pub fn handle_frame(
         }
 
         ManagementFrameLayer::ProbeRequest(ref probe_request_frame) => {
-          let ssid = probe_request_frame.ssid().ok_or_else(|| err_msg("ssid"))?;
+          let tagged_parameters = probe_request_frame.tagged_parameters()?;
+
+          let ssid = tagged_parameters.ssid().ok_or_else(|| err_msg("ssid"))?;
           if !ssid.is_empty() {
             store.probe_request(
               transmitter_address.ok_or_else(|| err_msg("no ta on ProbeRequest"))?,

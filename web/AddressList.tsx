@@ -35,8 +35,8 @@ function AccessPointsTable({
         <tr>
           <th>Signal</th>
           <th>Mac</th>
-          <th>SSID</th>
           <th>Channel</th>
+          <th>SSID</th>
         </tr>
       </thead>
       <tbody>
@@ -57,15 +57,13 @@ function AccessPointsTable({
               }}
               onMouseLeave={() => {
                 // console.log("mouse leave");
-                setTimeout(() => {
-                  onAddressHover(id, false);
-                }, 1);
+                onAddressHover(id, false);
               }}
             >
               <td>{signal}</td>
               <td>{id}</td>
-              <td>{ssid}</td>
               <td>{channel}</td>
+              <td>{ssid}</td>
             </tr>
           );
         })}
@@ -86,7 +84,8 @@ function StationsTable({
       <thead>
         <tr>
           <th>Signal</th>
-          <th>Mac</th>
+          <th>Bssid</th>
+          <th>Station</th>
         </tr>
       </thead>
       <tbody>
@@ -97,6 +96,15 @@ function StationsTable({
         ).map(([id, address]: [string, AddressOptions]) => {
           const { signal } = address;
 
+          const bssid = address.connections
+            ? Object.entries(address.connections)
+                .filter(
+                  ([other, kind]) =>
+                    kind === "Associated" || kind === "Authentication"
+                )
+                .map(([other]) => other)
+            : "(not associated)";
+
           return (
             <tr
               key={id}
@@ -104,12 +112,11 @@ function StationsTable({
                 onAddressHover(id, true);
               }}
               onMouseLeave={() => {
-                setTimeout(() => {
-                  onAddressHover(id, false);
-                }, 1);
+                onAddressHover(id, false);
               }}
             >
               <td>{signal}</td>
+              <td>{bssid}</td>
               <td>{id}</td>
             </tr>
           );
