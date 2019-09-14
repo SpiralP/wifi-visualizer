@@ -351,14 +351,14 @@ impl Store {
       }
     }
 
-    let last_frame_count =
-      if let Some(last_frame_count) = self.rate_last_frame_count.get_mut(&transmitter_address) {
-        let ag = *last_frame_count;
-        *last_frame_count = frame_count;
-        ag
-      } else {
-        0
-      };
+    let last_frame_count = if let Some(last_frame_count) = self
+      .rate_last_frame_count
+      .insert(transmitter_address, frame_count)
+    {
+      last_frame_count
+    } else {
+      0
+    };
 
     let rate = frame_count - last_frame_count;
 

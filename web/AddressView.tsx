@@ -2,7 +2,7 @@ import React from "react";
 import AddressNetwork, { AddressOptions } from "./AddressNetwork";
 import AddressList from "./AddressList";
 import { IToaster, Alert, Intent } from "@blueprintjs/core";
-import { byteArrayToString } from "./helpers";
+import { byteArrayToString, setNamedTimeout } from "./helpers";
 import { FrameEvent, MacAddress } from "./interfaceTypes";
 
 interface AddressViewProps {
@@ -88,12 +88,30 @@ export default class AddressView extends React.Component<
       this.updateAddress(id, {
         signal,
       });
+      setNamedTimeout(
+        `${id} Signal`,
+        () => {
+          this.updateAddress(id, {
+            signal: false,
+          });
+        },
+        5000
+      );
     } else if (event.type === "Rate") {
       const [id, rate] = event.data;
 
       this.updateAddress(id, {
         rate,
       });
+      setNamedTimeout(
+        `${id} Rate`,
+        () => {
+          this.updateAddress(id, {
+            rate: false,
+          });
+        },
+        5000
+      );
     } else if (event.type === "Error") {
       const error = event.data;
       console.warn("Error", error);

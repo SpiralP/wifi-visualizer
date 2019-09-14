@@ -27,8 +27,8 @@ export interface AddressOptions {
 
   // loss?: number;
 
-  signal?: number;
-  rate?: number;
+  signal?: number | false;
+  rate?: number | false;
 
   hovered?: boolean;
 }

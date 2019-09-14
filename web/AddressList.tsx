@@ -34,6 +34,7 @@ function AccessPointsTable({
       <thead>
         <tr>
           <th>Signal</th>
+          <th>Rate</th>
           <th>Mac</th>
           <th>Channel</th>
           <th>SSID</th>
@@ -45,22 +46,21 @@ function AccessPointsTable({
             ([_, address]) => address.accessPointInfo
           )
         ).map(([id, address]: [string, AddressOptions]) => {
-          const { signal } = address;
+          const { signal, rate } = address;
           const { ssid, channel } = address.accessPointInfo!;
 
           return (
             <tr
               key={id}
               onMouseEnter={() => {
-                // console.log("mouse enter");
                 onAddressHover(id, true);
               }}
               onMouseLeave={() => {
-                // console.log("mouse leave");
                 onAddressHover(id, false);
               }}
             >
               <td>{signal}</td>
+              <td>{rate}</td>
               <td>{id}</td>
               <td>{channel}</td>
               <td>{ssid}</td>
@@ -84,6 +84,7 @@ function StationsTable({
       <thead>
         <tr>
           <th>Signal</th>
+          <th>Rate</th>
           <th>Bssid</th>
           <th>Station</th>
         </tr>
@@ -94,15 +95,23 @@ function StationsTable({
             ([_, address]) => !address.accessPointInfo
           )
         ).map(([id, address]: [string, AddressOptions]) => {
-          const { signal } = address;
+          const { signal, rate } = address;
 
-          const bssid = address.connections
+          const bssids = address.connections
             ? Object.entries(address.connections)
                 .filter(
                   ([other, kind]) =>
                     kind === "Associated" || kind === "Authentication"
                 )
                 .map(([other]) => other)
+            : false;
+
+          const bssid = bssids
+            ? bssids.length === 1
+              ? bssids[0]
+              : bssids.length === 0
+              ? "(not associated)"
+              : "(multiple)"
             : "(not associated)";
 
           return (
@@ -116,6 +125,7 @@ function StationsTable({
               }}
             >
               <td>{signal}</td>
+              <td>{rate}</td>
               <td>{bssid}</td>
               <td>{id}</td>
             </tr>
