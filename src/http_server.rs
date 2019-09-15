@@ -1,4 +1,5 @@
 use crate::{packet_capture::CaptureType, websocket};
+use futures::prelude::*;
 use helpers::thread;
 use http::Response;
 use hyper::Body;
@@ -7,31 +8,29 @@ use std::net::SocketAddr;
 use tokio::prelude::*;
 use warp::{path::FullPath, Filter, Future, Reply};
 
-pub fn start(addr: SocketAddr, capture_type: CaptureType) -> impl Future<Item = (), Error = ()> {
-  future::lazy(move || {
-    info!("starting http/websocket server on http://{}/", addr);
+pub async fn start(addr: SocketAddr, capture_type: CaptureType) {
+  info!("starting http/websocket server on http://{}/", addr);
 
-    let routes = warp::path("ws")
-      .and(warp::ws2())
-      .map(move |ws: warp::ws::Ws2| {
-        let capture_type = capture_type.clone();
-        ws.on_upgrade(move |ws| {
-          // we don't want to use tokio here because iterator streams
-          // block the other http request futures by taking from the pool
-          thread::spawn("websocket future thread", move || {
-            let _ = websocket::start(ws, capture_type).wait();
-          });
+  let routes = warp::path("ws")
+    .and(warp::ws2())
+    .map(move |ws: warp::ws::Ws2| {
+      let capture_type = capture_type.clone();
+      ws.on_upgrade(move |ws| {
+        // we don't want to use tokio here because iterator streams
+        // block the other http request futures by taking from the pool
+        thread::spawn("websocket future thread", move || {
+          let _ = websocket::start(ws, capture_type).wait();
+        });
 
-          future::ok(())
-        })
+        future::ok(())
       })
-      .or(warp::path::full().map(|path: FullPath| {
-        debug!("http {}", path.as_str());
-        ParceljsResponder { path }
-      }));
+    })
+    .or(warp::path::full().map(|path: FullPath| {
+      debug!("http {}", path.as_str());
+      ParceljsResponder { path }
+    }));
 
-    warp::serve(routes).bind(addr)
-  })
+  warp::serve(routes).bind(addr)
 }
 
 struct ParceljsResponder {

@@ -1,54 +1,55 @@
 use crate::{
   error::*,
   events::{handle_frame, Event, Store},
-  inject_stream::InjectBeforeErrorStreamExt,
   packet_capture::{get_capture_stream, CaptureType},
 };
+use futures::prelude::*;
 use log::{error, info};
-use tokio::prelude::*;
 use warp::filters::ws::{Message, WebSocket};
 
-pub fn start(ws: WebSocket, capture_type: CaptureType) -> impl Future<Item = (), Error = ()> {
+pub async fn start(ws: WebSocket, capture_type: CaptureType) -> Result<()> {
   let (ws_sender, _ws_receiver) = ws.split();
 
-  start_capture_event_stream(capture_type)
-    .then(|result| {
-      let events_stream: Box<dyn Stream<Item = _, Error = _>> = match result {
-        Ok(events_stream) => Box::new(events_stream),
-        Err(e) => Box::new(stream::iter_result(vec![Err(e)])),
-      };
+  let events_stream: Box<dyn Stream<Item = _>> =
+    match start_capture_event_stream(capture_type).await {
+      Ok(events_stream) => Box::new(events_stream),
+      Err(e) => Box::new(stream::iter(vec![Err(e)])),
+    };
 
-      Ok(events_stream)
+  // .inject_before_error(|e| vec![Event::Error(format!("{}", e))])
+
+  events_stream
+    .map(|result| {
+      let events = result?;
+      let json = serde_json::to_string(&events).map_err(Error::from)?;
+      Ok(Message::text(json))
     })
-    .and_then(move |events_stream| {
-      events_stream
-        .inject_before_error(|e| vec![Event::Error(format!("{}", e))])
-        .and_then(|events| serde_json::to_string(&events).map_err(Error::from))
-        .map(Message::text)
-        .map_err(|e| error!("websocket: {}", e))
-        .forward(ws_sender.sink_map_err(|e| error!("websocket sink error: {}", e)))
-        .map(|_| ())
-    })
+    .map_err(|e| error!("websocket: {}", e))
+    .forward(ws_sender.sink_map_err(|e| error!("websocket sink error: {}", e)))
+    .map(|_| ())
     .inspect(|_| {
       info!("websocket closed");
     })
 }
 
-fn start_capture_event_stream(
+async fn start_capture_event_stream(
   capture_type: CaptureType,
-) -> impl Future<Item = impl Stream<Item = Vec<Event>, Error = Error>, Error = Error> {
-  future::lazy(move || get_capture_stream(capture_type)).map(|capture_stream| {
-    let mut store = Store::new();
+) -> Result<impl Stream<Item = Result<Vec<Event>>>> {
+  let capture_stream = get_capture_stream(capture_type).await?;
+  let mut store = Store::new();
 
-    capture_stream
-      .and_then(move |frame_with_radiotap| handle_frame(&mut store, &frame_with_radiotap))
-      .then(|result| match result {
-        Ok(_) => result,
-        Err(e) => {
-          error!("packet parse error: {:?}", e);
-          Ok(vec![])
-        }
-      })
-      .filter(|events| !events.is_empty())
-  })
+  capture_stream
+    .map(move |result| {
+      let frame_with_radiotap = result?;
+      Ok(handle_frame(&mut store, &frame_with_radiotap)?)
+    })
+    .map(|result| {
+      if let Err(e) = result {
+        error!("packet parse error: {:?}", e);
+        Ok(vec![])
+      } else {
+        result
+      }
+    })
+    .filter(|result| Ok(result.map(|events| !events.is_empty()).unwrap_or(false)))
 }

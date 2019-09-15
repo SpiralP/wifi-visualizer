@@ -23,11 +23,11 @@ serde_json = "1.0.40"
 time = "0.1.42"
 ws = "0.9.0"
 helpers = { path = "../rust-helpers" }
-tokio = "0.1.22"
+tokio = { git = "https://github.com/tokio-rs/tokio.git" }
 warp = "0.1.19"
-hyper = "0.12.35"
+hyper = { git = "https://github.com/hyperium/hyper.git" }
 http = "0.1.18"
-futures = "0.1.29"
+futures-preview = { version = "0.3.0-alpha.18", features = ["nightly", "async-await"] }
 bytes = "0.4.12"
 
 [target.'cfg(target_os = "linux")'.dependencies]
