@@ -48,32 +48,38 @@ pub fn get_capture_stream(
 
     let mut id = 0;
 
-    stream::iter_result(capture_iterator).map(move |bytes| {
-      let (radiotap, bytes) = if is_radiotap {
-        let (radiotap, rest) = Radiotap::parse(&bytes).unwrap();
+    stream::iter_result(capture_iterator).then(move |result| {
+      match result {
+        Err(e) => Err(e),
 
-        let has_fcs = radiotap.flags.map_or(false, |flags| flags.fcs);
+        Ok(bytes) => {
+          let (radiotap, bytes) = if is_radiotap {
+            let (radiotap, rest) = Radiotap::parse(&bytes)?;
 
-        let frame_bytes = if has_fcs {
-          // remove last 4 bytes (uint32_t)
-          let (data, _fcs) = rest.split_at(rest.len() - 4);
-          data
-        } else {
-          rest
-        };
+            let has_fcs = radiotap.flags.map_or(false, |flags| flags.fcs);
 
-        (Some(radiotap), frame_bytes.into())
-      } else {
-        (None, bytes)
-      };
+            let frame_bytes = if has_fcs {
+              // remove last 4 bytes (uint32_t)
+              let (data, _fcs) = rest.split_at(rest.len() - 4);
+              data
+            } else {
+              rest
+            };
 
-      let frame = Frame::new(bytes);
-      id += 1;
+            (Some(radiotap), frame_bytes.into())
+          } else {
+            (None, bytes)
+          };
 
-      FrameWithRadiotap {
-        id,
-        frame,
-        radiotap,
+          let frame = Frame::new(bytes);
+          id += 1;
+
+          Ok(FrameWithRadiotap {
+            id,
+            frame,
+            radiotap,
+          })
+        }
       }
     })
   })
