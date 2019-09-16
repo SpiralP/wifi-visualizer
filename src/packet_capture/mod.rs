@@ -55,7 +55,7 @@ pub async fn get_capture_stream(
 
       Ok(bytes) => {
         let (radiotap, bytes) = if is_radiotap {
-          let (radiotap, rest) = Radiotap::parse(&bytes).unwrap();
+          let (radiotap, rest) = Radiotap::parse(&bytes)?;
 
           let has_fcs = radiotap.flags.map_or(false, |flags| flags.fcs);
 

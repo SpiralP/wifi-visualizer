@@ -10,14 +10,13 @@ use warp::filters::ws::{Message, WebSocket};
 pub async fn start(ws: WebSocket, capture_type: CaptureType) -> Result<()> {
   let (ws_sender, _ws_receiver) = ws.split();
 
-  let events_stream: Box<dyn Stream<Item = _>> =
+  let events_stream: Box<dyn Stream<Item = Result<Vec<Event>>> + Unpin> =
     match start_capture_event_stream(capture_type).await {
       Ok(events_stream) => Box::new(events_stream),
       Err(e) => Box::new(stream::iter(vec![Err(e)])),
     };
 
   // .inject_before_error(|e| vec![Event::Error(format!("{}", e))])
-
   events_stream
     .map(|result| {
       let events = result?;
@@ -30,6 +29,9 @@ pub async fn start(ws: WebSocket, capture_type: CaptureType) -> Result<()> {
     .inspect(|_| {
       info!("websocket closed");
     })
+    .await;
+
+  Ok(())
 }
 
 async fn start_capture_event_stream(
@@ -38,18 +40,20 @@ async fn start_capture_event_stream(
   let capture_stream = get_capture_stream(capture_type).await?;
   let mut store = Store::new();
 
-  capture_stream
-    .map(move |result| {
-      let frame_with_radiotap = result?;
-      Ok(handle_frame(&mut store, &frame_with_radiotap)?)
-    })
-    .map(|result| {
-      if let Err(e) = result {
-        error!("packet parse error: {:?}", e);
-        Ok(vec![])
-      } else {
-        result
-      }
-    })
-    .filter(|result| Ok(result.map(|events| !events.is_empty()).unwrap_or(false)))
+  Ok(
+    capture_stream
+      .map(move |result| {
+        let frame_with_radiotap = result?;
+        Ok(handle_frame(&mut store, &frame_with_radiotap)?)
+      })
+      .map(|result| {
+        if let Err(e) = result {
+          error!("packet parse error: {:?}", e);
+          Ok(vec![])
+        } else {
+          result
+        }
+      })
+      .try_filter(|events| future::ready(!events.is_empty())),
+  )
 }
