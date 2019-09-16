@@ -5,15 +5,16 @@ use crate::{
 };
 use futures::prelude::*;
 use log::{error, info};
+use std::pin::Pin;
 use warp::filters::ws::{Message, WebSocket};
 
 pub async fn start(ws: WebSocket, capture_type: CaptureType) -> Result<()> {
   let (ws_sender, _ws_receiver) = ws.split();
 
-  let events_stream: Box<dyn Stream<Item = Result<Vec<Event>>> + Unpin> =
+  let events_stream: Pin<Box<dyn Stream<Item = Result<Vec<Event>>>>> =
     match start_capture_event_stream(capture_type).await {
-      Ok(events_stream) => Box::new(events_stream),
-      Err(e) => Box::new(stream::iter(vec![Err(e)])),
+      Ok(events_stream) => events_stream.boxed(),
+      Err(e) => stream::iter(vec![Err(e)]).boxed(),
     };
 
   // .inject_before_error(|e| vec![Event::Error(format!("{}", e))])
