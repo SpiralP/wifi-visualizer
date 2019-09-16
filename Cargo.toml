@@ -27,7 +27,7 @@ tokio = "0.2.0-alpha.4"
 warp = "0.1.19"
 hyper = "0.13.0-alpha.1"
 http = "0.1.18"
-futures-preview = "0.3.0-alpha.18"
+futures-preview = { version = "0.3.0-alpha.18", features = ["compat"] }
 bytes = "0.4.12"
 
 [target.'cfg(target_os = "linux")'.dependencies]

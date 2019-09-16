@@ -9,6 +9,7 @@ use std::pin::Pin;
 use warp::filters::ws::{Message, WebSocket};
 
 pub async fn start(ws: WebSocket, capture_type: CaptureType) -> Result<()> {
+  let ws = futures::compat::Compat01As03Sink::new(ws);
   let (ws_sender, _ws_receiver) = ws.split();
 
   let events_stream: Pin<Box<dyn Stream<Item = Result<Vec<Event>>>>> =
@@ -22,7 +23,7 @@ pub async fn start(ws: WebSocket, capture_type: CaptureType) -> Result<()> {
     .map(|result| {
       let events = result?;
       let json = serde_json::to_string(&events).map_err(Error::from)?;
-      Ok(Message::text(json))
+      Ok::<_, Error>(Message::text(json))
     })
     .map_err(|e| error!("websocket: {}", e))
     .forward(ws_sender.sink_map_err(|e| error!("websocket sink error: {}", e)))

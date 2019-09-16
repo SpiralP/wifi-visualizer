@@ -8,7 +8,6 @@ use ieee80211::Frame;
 use pcap::{linktypes, Activated, Capture, Error as PcapError};
 use radiotap::Radiotap;
 use std::{thread, time::Duration};
-use tokio::prelude::*;
 
 #[derive(Clone)]
 pub enum CaptureType {

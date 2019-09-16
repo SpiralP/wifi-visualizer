@@ -22,7 +22,7 @@ pub async fn start(addr: SocketAddr, capture_type: CaptureType) {
           block_on(websocket::start(ws, capture_type)).unwrap();
         });
 
-        future::ok(())
+        future::ok(()).compat()
       })
     })
     .or(warp::path::full().map(|path: FullPath| {
@@ -30,7 +30,7 @@ pub async fn start(addr: SocketAddr, capture_type: CaptureType) {
       ParceljsResponder { path }
     }));
 
-  warp::serve(routes).bind(addr)
+  futures::compat::Compat01As03::new(warp::serve(routes).bind(addr)).await;
 }
 
 struct ParceljsResponder {
