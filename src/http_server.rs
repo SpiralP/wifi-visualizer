@@ -18,7 +18,7 @@ pub async fn start(addr: SocketAddr, capture_type: CaptureType) {
         // we don't want to use tokio here because iterator streams
         // block the other http request futures by taking from the pool
         thread::spawn("websocket future thread", move || {
-          block_on(websocket::start(ws, capture_type)).unwrap();
+          block_on(websocket::start(ws, capture_type)).expect("block_on");
         });
 
         future::ok(()).compat()
@@ -31,7 +31,7 @@ pub async fn start(addr: SocketAddr, capture_type: CaptureType) {
 
   futures::compat::Compat01As03::new(warp::serve(routes).bind(addr))
     .await
-    .unwrap();
+    .expect("warp::serve().bind()");
 }
 
 struct ParceljsResponder {
@@ -49,9 +49,14 @@ impl Reply for ParceljsResponder {
         response.header(&b"Content-Type"[..], content_type);
       }
 
-      response.body(Body::from(data)).unwrap()
+      response
+        .body(Body::from(data))
+        .expect("response.body(Body::from(data))")
     } else {
-      Response::builder().status(404).body(Body::empty()).unwrap()
+      Response::builder()
+        .status(404)
+        .body(Body::empty())
+        .expect("Resposne::builder()..body(empty())")
     }
   }
 }
