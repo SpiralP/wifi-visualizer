@@ -18,6 +18,8 @@ use std::{
 
 #[tokio::main]
 async fn main() -> Result<()> {
+  println!("OK");
+
   let ip = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
   let http_server_addr = SocketAddr::new(ip, 8000);
 
@@ -77,18 +79,18 @@ async fn main() -> Result<()> {
     unreachable!()
   };
 
-  tokio::spawn(http_server::start(http_server_addr, capture_type));
-
   // TODO wait until packet capture begins successfully?
   let no_browser = matches.is_present("no_browser");
 
   if !no_browser {
-    tokio::spawn(async {
+    tokio::spawn(async move {
       tokio::timer::delay(Instant::now() + Duration::from_millis(100)).await;
 
       open::that(format!("http://{}/", http_server_addr)).unwrap();
     });
   }
+
+  http_server::start(http_server_addr, capture_type).await;
 
   Ok(())
 }

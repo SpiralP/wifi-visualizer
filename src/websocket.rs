@@ -1,6 +1,7 @@
 use crate::{
   error::*,
   events::{handle_frame, Event, Store},
+  inject_stream::InjectBeforeErrorTryStreamExt,
   packet_capture::{get_capture_stream, CaptureType},
 };
 use futures::prelude::*;
@@ -18,20 +19,21 @@ pub async fn start(ws: WebSocket, capture_type: CaptureType) -> Result<()> {
       Err(e) => stream::iter(vec![Err(e)]).boxed(),
     };
 
-  // .inject_before_error(|e| vec![Event::Error(format!("{}", e))])
-  events_stream
-    .map(|result| {
-      let events = result?;
-      let json = serde_json::to_string(&events).map_err(Error::from)?;
-      Ok::<_, Error>(Message::text(json))
-    })
-    .map_err(|e| error!("websocket: {}", e))
-    .forward(ws_sender.sink_map_err(|e| error!("websocket sink error: {}", e)))
-    .map(|_| ())
-    .inspect(|_| {
-      info!("websocket closed");
-    })
-    .await;
+  InjectBeforeErrorTryStreamExt::inject_before_error(events_stream, |e| {
+    vec![Event::Error(format!("{}", e))]
+  })
+  .map(|result| {
+    let events = result?;
+    let json = serde_json::to_string(&events).map_err(Error::from)?;
+    Ok::<_, Error>(Message::text(json))
+  })
+  .map_err(|e| error!("websocket: {}", e))
+  .forward(ws_sender.sink_map_err(|e| error!("websocket sink error: {}", e)))
+  .map(|_| ())
+  .inspect(|_| {
+    info!("websocket closed");
+  })
+  .await;
 
   Ok(())
 }

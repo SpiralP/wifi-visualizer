@@ -5,8 +5,7 @@ use http::Response;
 use hyper::Body;
 use log::{debug, info};
 use std::net::SocketAddr;
-use tokio::prelude::*;
-use warp::{path::FullPath, Filter, Future, Reply};
+use warp::{path::FullPath, Filter, Reply};
 
 pub async fn start(addr: SocketAddr, capture_type: CaptureType) {
   info!("starting http/websocket server on http://{}/", addr);
@@ -30,7 +29,9 @@ pub async fn start(addr: SocketAddr, capture_type: CaptureType) {
       ParceljsResponder { path }
     }));
 
-  futures::compat::Compat01As03::new(warp::serve(routes).bind(addr)).await;
+  futures::compat::Compat01As03::new(warp::serve(routes).bind(addr))
+    .await
+    .unwrap();
 }
 
 struct ParceljsResponder {
