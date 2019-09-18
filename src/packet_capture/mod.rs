@@ -3,11 +3,11 @@ mod get_capture;
 use self::get_capture::*;
 use crate::error::*;
 use bytes::Bytes;
+use futures::prelude::*;
 use ieee80211::Frame;
 use pcap::{linktypes, Activated, Capture, Error as PcapError};
 use radiotap::Radiotap;
 use std::{thread, time::Duration};
-use tokio::prelude::*;
 
 #[derive(Clone)]
 pub enum CaptureType {
@@ -40,49 +40,48 @@ pub struct FrameWithRadiotap {
   pub radiotap: Option<Radiotap>,
 }
 
-pub fn get_capture_stream(
+pub async fn get_capture_stream(
   capture_type: CaptureType,
-) -> impl Future<Item = impl Stream<Item = FrameWithRadiotap, Error = Error>, Error = Error> {
-  future::lazy(move || get_capture_iterator(capture_type)).map(|capture_iterator| {
-    let is_radiotap = capture_iterator.is_radiotap;
+) -> Result<impl Stream<Item = Result<FrameWithRadiotap>>> {
+  let capture_iterator = get_capture_iterator(capture_type)?;
+  let is_radiotap = capture_iterator.is_radiotap;
 
-    let mut id = 0;
+  let mut id = 0;
 
-    stream::iter_result(capture_iterator).then(move |result| {
-      match result {
-        Err(e) => Err(e),
+  Ok(stream::iter(capture_iterator).map(move |result| {
+    match result {
+      Err(e) => Err(e),
 
-        Ok(bytes) => {
-          let (radiotap, bytes) = if is_radiotap {
-            let (radiotap, rest) = Radiotap::parse(&bytes)?;
+      Ok(bytes) => {
+        let (radiotap, bytes) = if is_radiotap {
+          let (radiotap, rest) = Radiotap::parse(&bytes)?;
 
-            let has_fcs = radiotap.flags.map_or(false, |flags| flags.fcs);
+          let has_fcs = radiotap.flags.map_or(false, |flags| flags.fcs);
 
-            let frame_bytes = if has_fcs {
-              // remove last 4 bytes (uint32_t)
-              let (data, _fcs) = rest.split_at(rest.len() - 4);
-              data
-            } else {
-              rest
-            };
-
-            (Some(radiotap), frame_bytes.into())
+          let frame_bytes = if has_fcs {
+            // remove last 4 bytes (uint32_t)
+            let (data, _fcs) = rest.split_at(rest.len() - 4);
+            data
           } else {
-            (None, bytes)
+            rest
           };
 
-          let frame = Frame::new(bytes);
-          id += 1;
+          (Some(radiotap), frame_bytes.into())
+        } else {
+          (None, bytes)
+        };
 
-          Ok(FrameWithRadiotap {
-            id,
-            frame,
-            radiotap,
-          })
-        }
+        let frame = Frame::new(bytes);
+        id += 1;
+
+        Ok(FrameWithRadiotap {
+          id,
+          frame,
+          radiotap,
+        })
       }
-    })
-  })
+    }
+  }))
 }
 
 pub struct CaptureIterator {

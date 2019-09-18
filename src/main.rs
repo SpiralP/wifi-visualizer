@@ -10,14 +10,26 @@ mod websocket;
 
 use crate::{error::*, packet_capture::CaptureType};
 use clap::{clap_app, crate_name, crate_version};
-use log::{debug, error};
+use futures::{compat::*, prelude::*};
+use log::debug;
 use std::{
   net::{IpAddr, Ipv4Addr, SocketAddr},
   time::{Duration, Instant},
 };
-use tokio::{prelude::*, runtime::Runtime};
 
-fn main() -> Result<()> {
+// #[tokio::main] async -> Result<()>
+fn main() {
+  tokio::run(Compat::new(
+    async {
+      go().await.unwrap();
+
+      Ok(())
+    }
+      .boxed(),
+  ));
+}
+
+async fn go() -> Result<()> {
   let ip = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
   let http_server_addr = SocketAddr::new(ip, 8000);
 
@@ -77,27 +89,26 @@ fn main() -> Result<()> {
     unreachable!()
   };
 
-  let mut runtime = Runtime::new().expect("failed to start new Runtime");
-
-  runtime.spawn(http_server::start(http_server_addr, capture_type));
-
   // TODO wait until packet capture begins successfully?
   let no_browser = matches.is_present("no_browser");
 
   if !no_browser {
-    runtime.spawn(
-      future::lazy(move || {
-        tokio::timer::Delay::new(Instant::now() + Duration::from_millis(100)).and_then(move |_| {
-          open::that(format!("http://{}/", http_server_addr)).unwrap();
+    tokio::spawn(Compat::new(
+      async move {
+        tokio::timer::Delay::new(Instant::now() + Duration::from_millis(100))
+          .compat()
+          .await
+          .unwrap();
 
-          Ok(())
-        })
-      })
-      .map_err(|e| error!("url open: {}", e)),
-    );
+        open::that(format!("http://{}/", http_server_addr)).unwrap();
+
+        Ok(())
+      }
+        .boxed(),
+    ));
   }
 
-  runtime.shutdown_on_idle().wait().unwrap();
+  http_server::start(http_server_addr, capture_type).await;
 
   Ok(())
 }
