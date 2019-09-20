@@ -179,6 +179,7 @@ impl Store {
       .and_modify(move |beacon_count| *beacon_count += 1)
       .or_insert(1);
 
+    // TODO add timeout like signal, after 5 seconds, reset %
     if !self
       .beacon_quality_intervals
       .contains_key(&transmitter_address)
@@ -261,6 +262,9 @@ impl Store {
         .beacon_count
         .get(transmitter_address)
         .expect("beacon_count.get");
+
+      #[allow(clippy::cast_sign_loss)]
+      #[allow(clippy::cast_possible_truncation)]
       let real_count = ((now.duration_since(*start_time).as_secs_f64() / interval) as u64) + 1;
 
       self.buffer.push(Event::BeaconQuality(
@@ -318,13 +322,10 @@ impl Store {
       let (signal, time) = self.signals.get(transmitter_address).expect("signals.get");
 
       if now.duration_since(*time) >= self.signal_event_timeout {
-        println!("{} over duration", transmitter_address);
-
         self.buffer.push(Event::Signal(*transmitter_address, 0));
 
         to_remove.push(*transmitter_address);
       } else {
-        println!("{} {}", transmitter_address, signal);
         self
           .buffer
           .push(Event::Signal(*transmitter_address, *signal));

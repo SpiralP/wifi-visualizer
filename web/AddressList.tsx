@@ -34,6 +34,7 @@ function AccessPointsTable({
       <thead>
         <tr>
           <th>Signal</th>
+          <th>Beacons</th>
           <th>Rate</th>
           <th>Mac</th>
           <th>Channel</th>
@@ -46,7 +47,7 @@ function AccessPointsTable({
             ([_, address]) => address.accessPointInfo
           )
         ).map(([id, address]: [string, AddressOptions]) => {
-          const { signal, rate } = address;
+          const { signal, rate, beaconQuality } = address;
           const { ssid, channel } = address.accessPointInfo!;
 
           return (
@@ -60,6 +61,9 @@ function AccessPointsTable({
               }}
             >
               <td>{signal}</td>
+              <td>
+                {beaconQuality ? `${Math.floor(beaconQuality * 100)}%` : ""}
+              </td>
               <td>{rate}</td>
               <td>{id}</td>
               <td>{channel}</td>
