@@ -112,6 +112,11 @@ export default class AddressView extends React.Component<
         },
         5000
       );
+    } else if (event.type === "BeaconQuality") {
+      const [id, beaconQuality] = event.data;
+      this.updateAddress(id, {
+        beaconQuality,
+      });
     } else if (event.type === "Error") {
       const error = event.data;
       console.warn("Error", error);

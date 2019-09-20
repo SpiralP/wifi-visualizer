@@ -108,9 +108,35 @@ storiesOf("AddressView", module)
                 },
               ],
             },
+            {
+              type: "BeaconQuality",
+              data: ["98-d6-f7-01-01-03", 0.5],
+            },
+            {
+              type: "BeaconQuality",
+              data: ["98-d6-f7-01-01-03", 0.8],
+            },
+            {
+              type: "BeaconQuality",
+              data: ["98-d6-f7-01-01-03", 0.9],
+            },
+            {
+              type: "BeaconQuality",
+              data: ["98-d6-f7-01-01-03", 1.0],
+            },
           ];
 
-          events.forEach((event) => addressView.handleFrameEvent(event));
+          const t = (n: number) =>
+            new Promise((a) => {
+              setTimeout(a, n);
+            });
+
+          (async () => {
+            for (const event of events) {
+              await t(100);
+              addressView.handleFrameEvent(event);
+            }
+          })();
         }}
       />
     );

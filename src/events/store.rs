@@ -15,11 +15,12 @@ pub enum Event {
 
   ProbeRequest(MacAddress, Vec<u8>), // from, ssid
 
-  // InactiveAddress(Vec<MacAddress>),
   // Loss(MacAddress, u64, u64), // addr, # lost, # received
   Signal(MacAddress, i8),
 
   Rate(MacAddress, u64),
+
+  BeaconQuality(MacAddress, f32),
 
   Error(String),
 }
@@ -42,6 +43,8 @@ pub struct Store {
   buffer: Vec<Event>,
 
   addresses: HashMap<MacAddress, Timespec>,
+
+  // TODO instead of String use (mac1, mac2) in hashed sorted
   connections: HashMap<String, ConnectionType>,
   access_points: HashMap<MacAddress, AccessPointInfo>,
   probes: HashMap<MacAddress, HashSet<Vec<u8>>>,
@@ -78,32 +81,7 @@ impl Store {
     self.buffer.drain(..).collect()
   }
 
-  // pub fn check_for_inactive(&mut self) {
-  //   let mut macs_to_remove: Vec<MacAddress> = Vec::new();
-
-  //   let now = get_time();
-  //   for (a, b) in &self.addresses {
-  //     if (now - *b) > self.todo {
-  //       macs_to_remove.push(*a);
-  //     }
-  //   }
-
-  //   if macs_to_remove.is_empty() {
-  //     return;
-  //   }
-
-  //   for mac in &macs_to_remove {
-  //     self.addresses.remove(&mac);
-  //   }
-
-  //   self.buffer.push(Event::InactiveAddress(macs_to_remove));
-  // }
-
   pub fn add_address(&mut self, mac: MacAddress) {
-    if is_broadcast(mac) {
-      return;
-    }
-
     let now = get_time();
 
     let is_new_addr = self.addresses.get(&mac).is_none();
@@ -115,18 +93,17 @@ impl Store {
   }
 
   pub fn access_point(&mut self, mac: MacAddress, info: AccessPointInfo) {
-    if is_broadcast(mac) {
-      return; // TODO
-    } // TODO
-
     if self.access_points.contains_key(&mac) {
+      // TODO changing ssid/channel?
       return;
     }
 
-    self.add_address(mac);
-
     self.access_points.insert(mac, info.clone());
     self.buffer.push(Event::AccessPoint(mac, info));
+  }
+
+  pub fn update_beacon_quality(&mut self, mac: MacAddress, interval: f64) {
+    //
   }
 
   // pub fn update_loss(
@@ -266,15 +243,17 @@ impl Store {
   //   ));
   // }
 
-  pub fn change_connection(&mut self, mac1: MacAddress, mac2: MacAddress, kind: ConnectionType) {
-    self.add_address(mac1); // TODO these go higher level
-    self.add_address(mac2);
-
-    if is_broadcast(mac1) || is_broadcast(mac2) {
+  pub fn change_connection(
+    &mut self,
+    transmitter_address: MacAddress,
+    receiver_address: MacAddress,
+    kind: ConnectionType,
+  ) {
+    if is_broadcast(receiver_address) {
       return;
     }
 
-    let hash = hash_macs(mac1, mac2);
+    let hash = hash_macs(transmitter_address, receiver_address);
 
     if let Some(old_kind) = self.connections.get(&hash) {
       if kind == *old_kind {
@@ -297,14 +276,14 @@ impl Store {
     }
 
     self.connections.insert(hash, kind.clone());
-    self.buffer.push(Event::Connection(mac1, mac2, kind));
+    self.buffer.push(Event::Connection(
+      transmitter_address,
+      receiver_address,
+      kind,
+    ));
   }
 
   pub fn probe_request(&mut self, mac: MacAddress, ssid: Vec<u8>) {
-    if is_broadcast(mac) {
-      return;
-    }
-
     if let Some(ssid_list) = self.probes.get_mut(&mac) {
       if !ssid_list.contains(&ssid) {
         ssid_list.insert(ssid.clone());

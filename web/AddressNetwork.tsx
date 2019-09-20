@@ -22,6 +22,7 @@ export interface AddressOptions {
     ssid: string;
     channel?: number;
   };
+  beaconQuality?: number;
 
   probeRequests?: Array<string>;
 
@@ -61,7 +62,7 @@ export default class AddressNetwork extends React.PureComponent<
   ) {
     // console.log(`AddressManager updateNetwork ${id}`);
 
-    const { accessPointInfo, signal, rate, hovered } = address;
+    const { accessPointInfo, signal, rate, beaconQuality, hovered } = address;
 
     const color =
       known.indexOf(id) !== -1
@@ -90,14 +91,20 @@ export default class AddressNetwork extends React.PureComponent<
       label += `\n${rate} pps`;
     }
 
+    if (beaconQuality) {
+      label += `\n${Math.floor(beaconQuality * 100)}% beacons`;
+    }
+
     const size = hovered ? 100 : signal ? Math.max(100 + signal, 5) : 30;
+
+    const code = companyToIconCode(company);
 
     nodes[id] = {
       id,
       title,
       label,
       icon: {
-        code: companyToIconCode(company),
+        code,
         size,
         color,
       },
