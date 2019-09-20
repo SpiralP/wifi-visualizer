@@ -56,6 +56,8 @@ pub fn handle_frame(
     }
   }
 
+  store.check_timers();
+
   Ok(store.flush_buffer())
 }
 

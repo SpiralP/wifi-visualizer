@@ -53,7 +53,8 @@ export interface RateEvent extends FrameEventPrototype {
 }
 export interface BeaconQualityEvent extends FrameEventPrototype {
   type: "BeaconQuality";
-  data: [MacAddress, number];
+  // #received, #correct
+  data: [MacAddress, number, number];
 }
 export interface ErrorFrameEvent extends FrameEventPrototype {
   type: "Error";

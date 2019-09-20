@@ -88,34 +88,16 @@ export default class AddressView extends React.Component<
       this.updateAddress(id, {
         signal,
       });
-      setNamedTimeout(
-        `${id} Signal`,
-        () => {
-          this.updateAddress(id, {
-            signal: false,
-          });
-        },
-        5000
-      );
     } else if (event.type === "Rate") {
       const [id, rate] = event.data;
 
       this.updateAddress(id, {
         rate,
       });
-      setNamedTimeout(
-        `${id} Rate`,
-        () => {
-          this.updateAddress(id, {
-            rate: false,
-          });
-        },
-        5000
-      );
     } else if (event.type === "BeaconQuality") {
-      const [id, beaconQuality] = event.data;
+      const [id, received, correct] = event.data;
       this.updateAddress(id, {
-        beaconQuality,
+        beaconQuality: received / correct,
       });
     } else if (event.type === "Error") {
       const error = event.data;
