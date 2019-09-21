@@ -6,6 +6,7 @@ mod http_server;
 mod inject_stream;
 mod logger;
 mod packet_capture;
+mod helpers;
 mod websocket;
 
 use crate::{error::*, packet_capture::CaptureType};

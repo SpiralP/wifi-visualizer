@@ -1,6 +1,6 @@
 use crate::{packet_capture::CaptureType, websocket};
 use futures::{executor::block_on, prelude::*};
-use helpers::thread;
+use crate::helpers::thread;
 use http::Response;
 use hyper::Body;
 use log::{debug, info};
