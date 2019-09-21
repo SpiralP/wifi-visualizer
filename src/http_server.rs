@@ -1,6 +1,5 @@
-use crate::{packet_capture::CaptureType, websocket};
+use crate::{helpers, packet_capture::CaptureType, websocket};
 use futures::{executor::block_on, prelude::*};
-use crate::helpers::thread;
 use http::Response;
 use hyper::Body;
 use log::{debug, info};
@@ -17,7 +16,7 @@ pub async fn start(addr: SocketAddr, capture_type: CaptureType) {
       ws.on_upgrade(move |ws| {
         // we don't want to use tokio here because iterator streams
         // block the other http request futures by taking from the pool
-        thread::spawn("websocket future thread", move || {
+        helpers::spawn("websocket future thread", move || {
           block_on(websocket::start(ws, capture_type)).expect("block_on");
         });
 
