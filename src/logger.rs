@@ -15,8 +15,8 @@ pub fn initialize(debug: bool, other_crates: bool) {
 
     let my_crate_name = &env!("CARGO_PKG_NAME").replace("-", "_");
     env_logger::Builder::from_default_env()
-      .default_format_timestamp(false)
-      .default_format_module_path(false)
+      .format_timestamp(None)
+      .format_module_path(false)
       .filter(
         if other_crates {
           None
