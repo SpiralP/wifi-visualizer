@@ -2,32 +2,26 @@
 
 mod error;
 mod events;
+mod thread;
 mod http_server;
 mod inject_stream;
 mod logger;
 mod packet_capture;
-mod helpers;
 mod websocket;
 
 use crate::{error::*, packet_capture::CaptureType};
 use clap::{clap_app, crate_name, crate_version};
-use futures::{compat::*, prelude::*};
 use log::debug;
 use std::{
   net::{IpAddr, Ipv4Addr, SocketAddr},
   time::{Duration, Instant},
 };
 
-// #[tokio::main] async -> Result<()>
-fn main() {
-  tokio::run(Compat::new(
-    async {
-      go().await.unwrap();
+#[tokio::main]
+async fn main() -> Result<()> {
+  go().await.unwrap();
 
-      Ok(())
-    }
-      .boxed(),
-  ));
+  Ok(())
 }
 
 async fn go() -> Result<()> {
@@ -94,19 +88,11 @@ async fn go() -> Result<()> {
   let no_browser = matches.is_present("no_browser");
 
   if !no_browser {
-    tokio::spawn(Compat::new(
-      async move {
-        tokio::timer::Delay::new(Instant::now() + Duration::from_millis(100))
-          .compat()
-          .await
-          .unwrap();
+    tokio::spawn(async move {
+      tokio::timer::delay(Instant::now() + Duration::from_millis(100)).await;
 
-        open::that(format!("http://{}/", http_server_addr)).unwrap();
-
-        Ok(())
-      }
-        .boxed(),
-    ));
+      open::that(format!("http://{}/", http_server_addr)).unwrap();
+    });
   }
 
   http_server::start(http_server_addr, capture_type).await;

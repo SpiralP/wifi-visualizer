@@ -10,7 +10,6 @@ use std::pin::Pin;
 use warp::filters::ws::{Message, WebSocket};
 
 pub async fn start(ws: WebSocket, capture_type: CaptureType) -> Result<()> {
-  let ws = futures::compat::Compat01As03Sink::new(ws);
   let (ws_sender, _ws_receiver) = ws.split();
 
   let events_stream: Pin<Box<dyn Stream<Item = Result<Vec<Event>>>>> =

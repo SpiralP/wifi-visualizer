@@ -2,9 +2,9 @@ use ieee80211::MacAddress;
 
 pub fn hash_macs(mac1: MacAddress, mac2: MacAddress) -> String {
   if mac1 >= mac2 {
-    format!("{}{}", mac1, mac2).to_string()
+    format!("{}{}", mac1, mac2)
   } else {
-    format!("{}{}", mac2, mac1).to_string()
+    format!("{}{}", mac2, mac1)
   }
 }
 
