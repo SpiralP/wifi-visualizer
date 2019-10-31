@@ -2,11 +2,10 @@
 
 mod error;
 mod events;
-mod thread;
 mod http_server;
-mod inject_stream;
 mod logger;
 mod packet_capture;
+mod thread;
 mod websocket;
 
 use crate::{error::*, packet_capture::CaptureType};

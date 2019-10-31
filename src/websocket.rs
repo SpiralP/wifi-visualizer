@@ -1,7 +1,6 @@
 use crate::{
   error::*,
   events::{handle_frame, Event, Store},
-  inject_stream::InjectBeforeErrorTryStreamExt,
   packet_capture::{get_capture_stream, CaptureType},
 };
 use futures::prelude::*;
@@ -10,38 +9,34 @@ use std::pin::Pin;
 use warp::filters::ws::{Message, WebSocket};
 
 pub async fn start(ws: WebSocket, capture_type: CaptureType) -> Result<()> {
-  let (ws_sender, _ws_receiver) = ws.split();
+  let (mut ws_sender, _ws_receiver) = ws.split();
 
-  let events_stream: Pin<Box<dyn Stream<Item = Result<Vec<Event>>>>> =
+  let mut events_stream: Pin<Box<dyn Stream<Item = Result<Vec<Event>>>>> =
     match start_capture_event_stream(capture_type).await {
       Ok(events_stream) => events_stream.boxed(),
       Err(e) => stream::iter(vec![Err(e)]).boxed(),
     };
 
-  events_stream
-    // .inspect_ok(|events| {
-    //   for e in events {
-    //     // if let Event::BeaconQuality(_, _, _) = e {
-    //     //   info!("{:?}", events);
-    //     // }
-    //     if let Event::Rate(_, _) = e {
-    //       info!("{:?}", e);
-    //     }
-    //   }
-    // })
-    .inject_before_error(|e| vec![Event::Error(format!("{}", e))])
-    .map(|result| {
-      let events = result?;
-      let json = serde_json::to_string(&events).map_err(Error::from)?;
-      Ok::<_, Error>(Message::text(json))
-    })
-    .map_err(|e| error!("websocket: {}", e))
-    .forward(ws_sender.sink_map_err(|e| error!("websocket sink error: {}", e)))
-    .map(|_| ())
-    .inspect(|_| {
-      info!("websocket closed");
-    })
-    .await;
+  while let Some(result) = events_stream.next().await {
+    let was_error = result.is_err();
+
+    let message = result
+      .or_else(|err| Ok(vec![Event::Error(format!("{}", err))]))
+      .and_then(|events| serde_json::to_string(&events).map_err(Error::from))
+      .map(|json| Message::text(json))?;
+
+    if let Err(err) = ws_sender.send(message).await {
+      error!("websocket sink error: {}", err);
+      return Ok(());
+    }
+
+    if was_error {
+      break;
+    }
+  }
+
+  ws_sender.close().await?;
+  info!("websocket closed");
 
   Ok(())
 }

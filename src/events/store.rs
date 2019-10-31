@@ -1,6 +1,6 @@
 use super::*;
 use ieee80211::MacAddress;
-use serde_derive::*;
+use serde::Serialize;
 use std::{
   collections::{HashMap, HashSet},
   time::{Duration, Instant},
