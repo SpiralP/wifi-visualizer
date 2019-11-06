@@ -7,12 +7,6 @@ pub fn initialize(debug: bool, other_crates: bool) {
   static START: Once = Once::new();
 
   START.call_once(move || {
-    let level = if debug {
-      log::LevelFilter::Debug
-    } else {
-      log::LevelFilter::Info
-    };
-
     let my_crate_name = &env!("CARGO_PKG_NAME").replace("-", "_");
     env_logger::Builder::from_default_env()
       .format_timestamp(None)
@@ -23,7 +17,11 @@ pub fn initialize(debug: bool, other_crates: bool) {
         } else {
           Some(my_crate_name)
         },
-        level,
+        if debug {
+          log::LevelFilter::Debug
+        } else {
+          log::LevelFilter::Info
+        },
       )
       .init();
   });

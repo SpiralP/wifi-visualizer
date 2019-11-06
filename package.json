@@ -1,7 +1,6 @@
 {
   "name": "wifi-visualizer",
   "version": "1.0.0",
-  "main": "src/index.js",
   "author": "SpiralP <spiral.palmer@gmail.com>",
   "license": "MIT",
   "scripts": {

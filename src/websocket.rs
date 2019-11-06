@@ -23,7 +23,7 @@ pub async fn start(ws: WebSocket, capture_type: CaptureType) -> Result<()> {
     let message = result
       .or_else(|err| Ok(vec![Event::Error(format!("{}", err))]))
       .and_then(|events| serde_json::to_string(&events).map_err(Error::from))
-      .map(|json| Message::text(json))?;
+      .map(Message::text)?;
 
     if let Err(err) = ws_sender.send(message).await {
       error!("websocket sink error: {}", err);

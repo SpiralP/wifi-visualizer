@@ -18,12 +18,6 @@ use std::{
 
 #[tokio::main]
 async fn main() -> Result<()> {
-  go().await.unwrap();
-
-  Ok(())
-}
-
-async fn go() -> Result<()> {
   let ip = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
   let http_server_addr = SocketAddr::new(ip, 8000);
 
