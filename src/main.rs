@@ -13,7 +13,7 @@ use clap::{clap_app, crate_name, crate_version};
 use log::debug;
 use std::{
   net::{IpAddr, Ipv4Addr, SocketAddr},
-  time::{Duration, Instant},
+  time::Duration,
 };
 
 #[tokio::main]
@@ -82,7 +82,7 @@ async fn main() -> Result<()> {
 
   if !no_browser {
     tokio::spawn(async move {
-      tokio::timer::delay(Instant::now() + Duration::from_millis(100)).await;
+      tokio::time::delay_for(Duration::from_millis(100)).await;
 
       open::that(format!("http://{}/", http_server_addr)).unwrap();
     });

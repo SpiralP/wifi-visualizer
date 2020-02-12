@@ -23,10 +23,5 @@ if (module.hot != null) {
 
 status("index.tsx");
 
-const root = document.getElementById("root");
-if (root) {
-  const toaster = Toaster.create({ position: "top-right" });
-  ReactDOM.render(<App toaster={toaster} />, root);
-} else {
-  console.error("no root element!");
-}
+const toaster = Toaster.create({ position: "top-right" });
+ReactDOM.render(<App toaster={toaster} />, document.getElementById("root"));

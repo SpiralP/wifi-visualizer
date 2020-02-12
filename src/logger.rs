@@ -1,5 +1,3 @@
-use env_logger;
-use log;
 use std::sync::Once;
 
 #[inline]

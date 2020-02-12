@@ -9,8 +9,8 @@ pub async fn start(addr: SocketAddr, capture_type: CaptureType) {
   info!("starting http/websocket server on http://{}/", addr);
 
   let routes = warp::path("ws")
-    .and(warp::ws2())
-    .map(move |ws: warp::ws::Ws2| {
+    .and(warp::ws())
+    .map(move |ws: warp::ws::Ws| {
       let capture_type = capture_type.clone();
       ws.on_upgrade(move |ws| {
         async {

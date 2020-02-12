@@ -52,7 +52,7 @@ pub async fn get_capture_stream(
     match result {
       Err(e) => Err(e),
 
-      Ok(bytes) => {
+      Ok(ref bytes) => {
         let (radiotap, bytes) = if is_radiotap {
           let (radiotap, rest) = Radiotap::parse(&bytes)?;
 
@@ -66,9 +66,10 @@ pub async fn get_capture_stream(
             rest
           };
 
-          (Some(radiotap), frame_bytes.into())
+          // TODO use a bytes.split instead of to_vec here
+          (Some(radiotap), Bytes::from(frame_bytes.to_vec()))
         } else {
-          (None, bytes)
+          (None, bytes.clone())
         };
 
         let frame = Frame::new(bytes);
@@ -151,7 +152,7 @@ impl Iterator for CaptureIterator {
           self.maybe_last_time = Some(current_time);
         }
 
-        Some(Ok(Bytes::from(packet.data)))
+        Some(Ok(Bytes::from(packet.data.to_vec())))
       }
     }
   }
