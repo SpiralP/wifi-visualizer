@@ -52,7 +52,7 @@ pub async fn get_capture_stream(
     match result {
       Err(e) => Err(e),
 
-      Ok(ref bytes) => {
+      Ok(bytes) => {
         let (radiotap, bytes) = if is_radiotap {
           let (radiotap, rest) = Radiotap::parse(&bytes)?;
 
@@ -66,10 +66,9 @@ pub async fn get_capture_stream(
             rest
           };
 
-          // TODO use a bytes.split instead of to_vec here
-          (Some(radiotap), Bytes::from(frame_bytes.to_vec()))
+          (Some(radiotap), bytes.slice_ref(frame_bytes))
         } else {
-          (None, bytes.clone())
+          (None, bytes)
         };
 
         let frame = Frame::new(bytes);
@@ -83,6 +82,17 @@ pub async fn get_capture_stream(
       }
     }
   }))
+}
+
+#[test]
+fn test_slice_ref() {
+  let raw = b"hello!";
+  let raw = &raw[..];
+
+  let ag = Bytes::from(raw);
+
+  let bo = &raw[2..];
+  println!("{:#?}", ag.slice_ref(bo));
 }
 
 pub struct CaptureIterator {
