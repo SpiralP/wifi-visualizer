@@ -1,11 +1,10 @@
 use crate::{packet_capture::CaptureType, thread, websocket};
 use futures::executor::block_on;
 use log::{debug, info};
-use parceljs::warp::ParceljsResponder;
 use std::net::SocketAddr;
 use warp::{path::FullPath, Filter};
 
-include!(concat!(env!("OUT_DIR"), "/web_files.rs"));
+include!(concat!(env!("OUT_DIR"), "/parceljs.rs"));
 
 pub async fn start(addr: SocketAddr, capture_type: CaptureType) {
   info!("starting http/websocket server on http://{}/", addr);
@@ -26,7 +25,7 @@ pub async fn start(addr: SocketAddr, capture_type: CaptureType) {
     })
     .or(warp::path::full().map(|path: FullPath| {
       debug!("http {}", path.as_str());
-      ParceljsResponder::new(&WEB_FILES, path)
+      PARCELJS.as_reply(path)
     }));
 
   warp::serve(routes).bind(addr).await;
