@@ -5,6 +5,8 @@ use parceljs::warp::ParceljsResponder;
 use std::net::SocketAddr;
 use warp::{path::FullPath, Filter};
 
+include!(concat!(env!("OUT_DIR"), "/web_files.rs"));
+
 pub async fn start(addr: SocketAddr, capture_type: CaptureType) {
   info!("starting http/websocket server on http://{}/", addr);
 
@@ -24,7 +26,7 @@ pub async fn start(addr: SocketAddr, capture_type: CaptureType) {
     })
     .or(warp::path::full().map(|path: FullPath| {
       debug!("http {}", path.as_str());
-      ParceljsResponder::new(path)
+      ParceljsResponder::new(&WEB_FILES, path)
     }));
 
   warp::serve(routes).bind(addr).await;
