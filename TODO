@@ -1,0 +1,20 @@
+drop capabilities after sniffing start?
+
+
+change websocket interface to be {
+  addr,
+  state: "ap" | "station"
+}
+
+add a list of access points
+
+show % packet loss from sequence numbers
+  have 2 parts:
+    sequence number difference
+    per beacon interval vs sequence number
+      this would only update if we capture more packets
+      so we can assume a beacon every interval
+
+
+
+sorting by other columns in table
