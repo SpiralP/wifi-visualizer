@@ -20,7 +20,7 @@ gzip -c -d caps/wpa-eap-tls.pcap.gz | cargo run --release -- --file -
 
 ```
 USAGE:
-    wifi-visualizer.exe [FLAGS] --file <FILE> --interface <INTERFACE>
+    wifi-visualizer [FLAGS] --file <FILE> --interface <INTERFACE>
 
 FLAGS:
     -v, --debug                Show debug messages, multiple flags for higher verbosity
@@ -32,6 +32,12 @@ FLAGS:
 OPTIONS:
     -f, --file <FILE>              File to read from
     -i, --interface <INTERFACE>    Interface to capture packets from
+```
+
+## Install
+
+```
+cargo install --git https://github.com/SpiralP/wifi-visualizer.git
 ```
 
 ## Local
