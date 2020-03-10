@@ -51,10 +51,11 @@ pub fn get_stdin_capture() -> Result<Capture<Offline>> {
 
 #[test]
 fn test_file_capture() {
-  let cap = get_file_capture("./caps/bap.cap".to_string()).unwrap();
+  let cap = get_file_capture("caps/wpa-Induction.pcap").unwrap();
   println!("{:#?}", cap.list_datalinks().unwrap());
 }
 
+#[ignore]
 #[test]
 fn test_live_capture() {
   use pcap::Error as PcapError;
