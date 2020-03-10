@@ -1,5 +1,23 @@
 # wifi-visualizer
 
+## Running samples
+
+```
+cargo run --release -- --file caps/wpa-Induction.pcap
+```
+
+![example](.github/example.png)
+
+```
+cargo run --release -- --no-sleep-playback --file caps/Network_Join_Nokia_Mobile.pcap
+```
+
+```
+gzip -c -d caps/wpa-eap-tls.pcap.gz | cargo run --release -- --file -
+```
+
+## Usage
+
 ```
 USAGE:
     wifi-visualizer.exe [FLAGS] --file <FILE> --interface <INTERFACE>
@@ -14,6 +32,12 @@ FLAGS:
 OPTIONS:
     -f, --file <FILE>              File to read from
     -i, --interface <INTERFACE>    Interface to capture packets from
+```
+
+## Local
+
+```sh
+wifi-visualizer --interface wlan0mon
 ```
 
 ## Remote SSH
@@ -34,5 +58,9 @@ set PATH=C:\Program Files\Wireshark
 ## Changing channels
 
 ```sh
-rem iw dev mon0 set channel %1
+iw dev mon0 set channel %1
 ```
+
+# Resources
+
+Sample captures from https://wiki.wireshark.org/SampleCaptures#Wifi_.2F_Wireless_LAN_captures_.2F_802.11
