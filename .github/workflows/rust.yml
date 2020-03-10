@@ -1,0 +1,93 @@
+name: Rust
+
+on: [push]
+
+jobs:
+  build_linux:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install deps
+        run: sudo apt-get -y update && sudo apt-get -y install libpcap-dev llvm clang
+
+      - name: Install nightly
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+
+      - name: Test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: -- --nocapture
+
+  build_windows:
+    runs-on: windows-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install deps
+        run: |
+          iwr -useb get.scoop.sh | iex
+          echo "##[add-path]$HOME\scoop\shims"
+          echo "##[add-path]C:\ProgramData\scoop\shims"
+          scoop install aria2
+          scoop install llvm
+          echo "::set-env name=LIBCLANG_PATH::$HOME\scoop\apps\llvm\current\bin"
+          Invoke-WebRequest -Uri 'https://nmap.org/npcap/dist/npcap-0.9987.exe' -OutFile npcap-0.9987.exe
+          7z x -y 'npcap-0.9987.exe' '$SYSDIR\wpcap.dll' '$SYSDIR\Packet.dll'
+          echo '##[add-path].\$SYSDIR'
+
+      - name: Install nightly
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+
+      - name: Test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: -- --nocapture
+
+  build_mac:
+    runs-on: macOS-latest
+
+    steps:
+      - uses: actions/checkout@v2
+
+      - name: Install deps
+        run: |
+          brew install libpcap llvm
+          echo "##[add-path]/usr/local/opt/llvm/bin"
+
+      - name: Install nightly
+        uses: actions-rs/toolchain@v1
+        with:
+          toolchain: nightly
+          override: true
+
+      - name: Build
+        uses: actions-rs/cargo@v1
+        with:
+          command: build
+
+      - name: Test
+        uses: actions-rs/cargo@v1
+        with:
+          command: test
+          args: -- --nocapture
