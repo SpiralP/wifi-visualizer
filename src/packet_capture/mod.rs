@@ -1,7 +1,7 @@
 mod get_capture;
 
-use self::get_capture::*;
-use crate::error::*;
+use self::get_capture::{get_file_capture, get_interface, get_live_capture, get_stdin_capture};
+use crate::error::{bail, Result};
 use bytes::Bytes;
 use futures::prelude::*;
 use ieee80211::Frame;

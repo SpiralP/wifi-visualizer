@@ -8,7 +8,7 @@ mod packet_capture;
 mod thread;
 mod websocket;
 
-use crate::{error::*, packet_capture::CaptureType};
+use crate::{error::Result, packet_capture::CaptureType};
 use clap::{clap_app, crate_name, crate_version};
 use log::debug;
 use std::{

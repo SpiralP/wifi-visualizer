@@ -1,5 +1,5 @@
 use crate::{
-  error::*,
+  error::{Error, Result},
   events::{handle_frame, Event, Store},
   packet_capture::{get_capture_stream, CaptureType},
 };

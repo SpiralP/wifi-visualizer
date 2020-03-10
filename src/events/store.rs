@@ -1,4 +1,4 @@
-use super::*;
+use super::{hash_macs, is_broadcast};
 use ieee80211::MacAddress;
 use serde::Serialize;
 use std::{

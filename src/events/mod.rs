@@ -2,8 +2,15 @@ pub mod store;
 mod util;
 
 pub use self::{store::*, util::*};
-use crate::{error::*, packet_capture::FrameWithRadiotap};
-use ieee80211::*;
+use crate::{
+  error::{err_msg, Result},
+  packet_capture::FrameWithRadiotap,
+};
+use ieee80211::{
+  BeaconFixedParametersTrait, ControlFrameTrait, DataFrameTrait, FrameLayer, FrameSubtype,
+  FrameTrait, MacAddress, ManagementFrameLayer, ManagementFrameTrait, ManagementSubtype,
+  TaggedParametersTrait,
+};
 use log::warn;
 
 pub fn handle_frame(

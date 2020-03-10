@@ -1,4 +1,4 @@
-use crate::error::*;
+use crate::error::{bail, Result};
 use log::info;
 use pcap::{Active, Capture, Device, Offline};
 #[cfg(unix)]
