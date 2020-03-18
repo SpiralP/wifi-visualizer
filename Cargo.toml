@@ -11,7 +11,6 @@ env_logger = "0.7.1"
 failure = "0.1.7"
 futures = "0.3.4"
 ieee80211 = { git = "https://github.com/SpiralP/rust-ieee80211.git", features = ["serde"] }
-includedir = { git = "https://github.com/SpiralP/includedir.git" }
 log = "0.4.8"
 open = "1.4.0"
 parceljs = { git = "https://github.com/SpiralP/rust-parceljs.git", features = ["warp"] }

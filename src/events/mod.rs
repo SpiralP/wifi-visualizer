@@ -97,7 +97,10 @@ fn handle_transmitter(
           store.access_point(
             transmitter_address,
             AccessPointInfo {
-              ssid: tagged_parameters.ssid().ok_or_else(|| err_msg("ssid"))?,
+              ssid: tagged_parameters
+                .ssid()
+                .ok_or_else(|| err_msg("ssid"))?
+                .to_vec(),
               channel: tagged_parameters.channel(),
             },
           );
@@ -111,7 +114,10 @@ fn handle_transmitter(
           store.access_point(
             transmitter_address,
             AccessPointInfo {
-              ssid: tagged_parameters.ssid().ok_or_else(|| err_msg("ssid"))?,
+              ssid: tagged_parameters
+                .ssid()
+                .ok_or_else(|| err_msg("ssid"))?
+                .to_vec(),
               channel: tagged_parameters.channel(),
             },
           );
@@ -122,7 +128,7 @@ fn handle_transmitter(
 
           let ssid = tagged_parameters.ssid().ok_or_else(|| err_msg("ssid"))?;
           if !ssid.is_empty() {
-            store.probe_request(transmitter_address, ssid);
+            store.probe_request(transmitter_address, ssid.to_vec());
           }
         }
 

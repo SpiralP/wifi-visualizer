@@ -18,3 +18,7 @@ show % packet loss from sequence numbers
 
 
 sorting by other columns in table
+
+
+convert CaptureIterator to use async methods instead of a blocking Iterator
+  This will need pcap to be written with newer async/futures

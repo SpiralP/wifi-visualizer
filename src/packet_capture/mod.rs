@@ -2,12 +2,11 @@ mod get_capture;
 
 use self::get_capture::{get_file_capture, get_interface, get_live_capture, get_stdin_capture};
 use crate::error::{bail, Result};
-use bytes::Bytes;
 use futures::prelude::*;
 use ieee80211::Frame;
 use pcap::{linktypes, Activated, Capture, Error as PcapError};
 use radiotap::Radiotap;
-use std::{thread, time::Duration};
+use std::{borrow::Cow, thread, time::Duration};
 
 #[derive(Clone)]
 pub enum CaptureType {
@@ -34,15 +33,15 @@ fn get_capture_iterator(capture_type: CaptureType) -> Result<CaptureIterator> {
   CaptureIterator::new(capture, sleep_playback)
 }
 
-pub struct FrameWithRadiotap {
+pub struct FrameWithRadiotap<'a> {
   pub id: u64,
-  pub frame: Frame,
+  pub frame: Frame<'a>,
   pub radiotap: Option<Radiotap>,
 }
 
 pub async fn get_capture_stream(
   capture_type: CaptureType,
-) -> Result<impl Stream<Item = Result<FrameWithRadiotap>>> {
+) -> Result<impl Stream<Item = Result<FrameWithRadiotap<'static>>>> {
   let capture_iterator = get_capture_iterator(capture_type)?;
   let is_radiotap = capture_iterator.is_radiotap;
 
@@ -66,12 +65,12 @@ pub async fn get_capture_stream(
             rest
           };
 
-          (Some(radiotap), bytes.slice_ref(frame_bytes))
+          (Some(radiotap), Cow::Borrowed(frame_bytes))
         } else {
-          (None, bytes)
+          (None, Cow::Owned(bytes))
         };
 
-        let frame = Frame::new(bytes);
+        let frame = Frame::new(bytes.into_owned());
         id += 1;
 
         Ok(FrameWithRadiotap {
@@ -82,17 +81,6 @@ pub async fn get_capture_stream(
       }
     }
   }))
-}
-
-#[test]
-fn test_slice_ref() {
-  let raw = b"hello!";
-  let raw = &raw[..];
-
-  let ag = Bytes::from(raw);
-
-  let bo = &raw[2..];
-  println!("{:#?}", ag.slice_ref(bo));
 }
 
 pub struct CaptureIterator {
@@ -130,7 +118,7 @@ impl CaptureIterator {
 }
 
 impl Iterator for CaptureIterator {
-  type Item = Result<Bytes>;
+  type Item = Result<Vec<u8>>;
 
   fn next(&mut self) -> Option<Self::Item> {
     match self.capture.next() {
@@ -146,7 +134,7 @@ impl Iterator for CaptureIterator {
         }
       },
 
-      Ok(ref packet) => {
+      Ok(packet) => {
         if self.sleep_playback {
           #[allow(clippy::cast_possible_truncation)]
           #[allow(clippy::cast_sign_loss)]
@@ -162,7 +150,7 @@ impl Iterator for CaptureIterator {
           self.maybe_last_time = Some(current_time);
         }
 
-        Some(Ok(Bytes::from(packet.data.to_vec())))
+        Some(Ok(packet.data.to_owned()))
       }
     }
   }
