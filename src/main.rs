@@ -8,87 +8,96 @@ mod packet_capture;
 mod thread;
 mod websocket;
 
-use crate::{error::Result, packet_capture::CaptureType};
-use clap::{clap_app, crate_name, crate_version};
-use log::debug;
 use std::{
-  net::{IpAddr, Ipv4Addr, SocketAddr},
-  time::Duration,
+    net::{IpAddr, Ipv4Addr, SocketAddr},
+    time::Duration,
 };
+
+use clap::{ArgAction, Parser};
+use log::debug;
+
+use crate::{error::Result, packet_capture::CaptureType};
+
+/// wifi-visualizer
+#[derive(Debug, Parser)]
+#[command(author, version)]
+pub struct Args {
+    /// Show debug messages, multiple flags for higher verbosity
+    #[clap(short, long, action(ArgAction::Count))]
+    pub verbose: u8,
+
+    /// Don't open browser
+    #[arg(short, long)]
+    pub no_browser: bool,
+
+    /// Don't play back files at original speed
+    #[arg(long, requires("file"))]
+    pub no_sleep_playback: bool,
+
+    /// File to read from
+    #[arg(short, long, required(true), conflicts_with("interface"))]
+    pub file: Option<String>,
+
+    /// Interface to capture packets from
+    #[arg(short, long, required(true), conflicts_with("file"))]
+    pub interface: Option<String>,
+}
 
 #[tokio::main]
 async fn main() -> Result<()> {
-  let ip = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
-  let http_server_addr = SocketAddr::new(ip, 8000);
+    let ip = IpAddr::V4(Ipv4Addr::new(127, 0, 0, 1));
+    let http_server_addr = SocketAddr::new(ip, 8000);
 
-  let matches = clap_app!(app =>
-      (name: crate_name!())
-      (version: crate_version!())
+    let args = Args::parse();
 
-      (@arg debug: -v --verbose --debug ... "Show debug messages, multiple flags for higher verbosity")
-      (@arg no_browser: -n --("no-browser") "Don't open browser")
-      (@arg no_sleep_playback: requires[input_file] --("no-sleep-playback") "Don't play back files at original speed")
+    #[cfg(debug_assertions)]
+    logger::initialize(true, false);
 
-      (@arg input_file: conflicts_with[interface] -f --file [FILE] +required "File to read from")
-      (@arg interface: conflicts_with[input_file] -i --interface [INTERFACE] +required "Interface to capture packets from")
-  )
-  .get_matches();
+    #[cfg(not(debug_assertions))]
+    logger::initialize(args.verbose >= 1, args.verbose >= 2);
 
-  #[cfg(debug_assertions)]
-  logger::initialize(true, false);
+    let capture_type = if let Some(file) = args.file {
+        debug!("got input file {:?}", file);
 
-  #[cfg(not(debug_assertions))]
-  logger::initialize(
-    matches.is_present("debug"),
-    matches.occurrences_of("debug") > 1,
-  );
+        if file == "-" {
+            CaptureType::Stdin
+        } else {
+            CaptureType::File(file, !args.no_sleep_playback)
+        }
+    } else if let Some(interface_name) = args.interface {
+        debug!("got interface name {:?}", interface_name);
 
-  let capture_type = if let Some(input_file) = matches.value_of("input_file") {
-    debug!("got input file {:?}", input_file);
+        #[cfg(target_os = "linux")]
+        {
+            use std::env;
 
-    if input_file == "-" {
-      CaptureType::Stdin
+            use caps::{CapSet, Capability};
+            use log::warn;
+
+            if !caps::has_cap(None, CapSet::Permitted, Capability::CAP_NET_RAW).unwrap() {
+                warn!("WARNING: CAP_NET_RAW not permitted! live packet capture won't work!");
+                warn!(
+                    "try running: sudo setcap cap_net_raw+ep {}",
+                    env::current_exe()?.display()
+                );
+            }
+        }
+
+        CaptureType::Interface(interface_name)
     } else {
-      CaptureType::File(
-        input_file.to_string(),
-        !matches.is_present("no_sleep_playback"),
-      )
-    }
-  } else if let Some(interface_name) = matches.value_of("interface") {
-    debug!("got interface name {:?}", interface_name);
+        unreachable!()
+    };
 
-    #[cfg(target_os = "linux")]
-    {
-      use caps::{CapSet, Capability};
-      use log::warn;
-      use std::env;
+    // TODO wait until packet capture begins successfully?
+    if !args.no_browser {
+        tokio::spawn(async move {
+            tokio::time::sleep(Duration::from_millis(100)).await;
 
-      if !caps::has_cap(None, CapSet::Permitted, Capability::CAP_NET_RAW).unwrap() {
-        warn!("WARNING: CAP_NET_RAW not permitted! live packet capture won't work!");
-        warn!(
-          "try running: sudo setcap cap_net_raw+ep {}",
-          env::current_exe()?.display()
-        );
-      }
+            open::that(format!("http://{}/", http_server_addr)).unwrap();
+        });
     }
 
-    CaptureType::Interface(interface_name.to_string())
-  } else {
-    unreachable!()
-  };
+    http_server::start(http_server_addr, capture_type).await;
 
-  // TODO wait until packet capture begins successfully?
-  let no_browser = matches.is_present("no_browser");
-
-  if !no_browser {
-    tokio::spawn(async move {
-      tokio::time::sleep(Duration::from_millis(100)).await;
-
-      open::that(format!("http://{}/", http_server_addr)).unwrap();
-    });
-  }
-
-  http_server::start(http_server_addr, capture_type).await;
-
-  Ok(())
+    Ok(())
 }

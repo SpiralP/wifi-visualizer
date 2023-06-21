@@ -18,12 +18,8 @@
           rustPlatform =
             let
               rust = (pkgs.rustChannelOf {
-                date = "2023-04-23";
-                channel = "nightly";
-                sha256 = "sha256-f+dMK7oRvMx2VYzqJru4ElIngARn4d2q2GkAPdlZrW0=";
-
-                # channel = "1.69.0";
-                # sha256 = "sha256-eMJethw5ZLrJHmoN2/l0bIyQjoTX1NsvalWSscTixpI=";
+                channel = "1.70.0";
+                sha256 = "sha256-gdYqng0y9iHYzYPAdkC/ka3DRny3La/S5G8ASj0Ayyc=";
               }).rust.override {
                 extensions = if dev then [ "rust-src" ] else [ ];
               };
@@ -96,7 +92,7 @@
             cargoLock = {
               lockFile = ./Cargo.lock;
               outputHashes = {
-                "ieee80211-0.1.0" = "sha256-mIErOiJNj6wMbULsL5+bzih0w+Fxp8AigkHq7Il4mvo=";
+                "ieee80211-0.1.0" = "sha256-GCy3t+N9Gz3j6X8zgfgfEsKbWhmfYUE1yZQ28MGzXEM=";
                 "nodejs-bundler-3.0.0" = "sha256-B0Rj8npZ2YM7uh1eW+CSxbE8QD+8jNV8+NuGVSb3BBM=";
                 "pcap-0.7.0" = "sha256-7cVw+GGF00DjP4rtuPmczuS5wh+NwqtuXmAD6luhGns=";
                 "pcap-sys-0.1.0" = "sha256-i+O3xL1GPH+WnB8ZCoLX0WOOj3HWLuRkKmIuC8G4BsQ=";

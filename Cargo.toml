@@ -2,17 +2,16 @@
 name = "wifi-visualizer"
 version = "0.1.0"
 authors = ["SpiralP <spiral.palmer@gmail.com>"]
-edition = "2018"
+edition = "2021"
 
 [dependencies]
-bytes = "0.5"
-clap = "2"
-env_logger = "0.7"
+clap = { version = "4", features = ["derive"] }
+env_logger = "0.10"
 failure = "0.1"
 futures = "0.3"
 ieee80211 = { git = "https://github.com/SpiralP/rust-ieee80211.git", features = ["serde"] }
 log = "0.4"
-open = "1"
+open = "4"
 nodejs-bundler = { git = "https://github.com/SpiralP/rust-nodejs-bundler.git", features = ["warp"] }
 pcap = { git = "https://github.com/SpiralP/rust-pcap.git" }
 radiotap = "1"
@@ -22,7 +21,7 @@ tokio = { version = "1", features = ["full"] }
 warp = "0.3"
 
 [target.'cfg(target_os = "linux")'.dependencies]
-caps = "0.3"
+caps = "0.5"
 
 [build-dependencies]
 nodejs-bundler-codegen = { git = "https://github.com/SpiralP/rust-nodejs-bundler.git" }
