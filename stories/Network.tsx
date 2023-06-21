@@ -1,17 +1,17 @@
-import "@blueprintjs/icons/lib/css/blueprint-icons.css";
 import "@blueprintjs/core/lib/css/blueprint.css";
-import "vis-network/dist/vis-network.css"; // for popups
+import "@blueprintjs/icons/lib/css/blueprint-icons.css";
 import "@fortawesome/fontawesome-free/css/solid.css";
+import "vis-network/dist/dist/vis-network.css"; // for popups
 // import "@fortawesome/fontawesome-free/css/regular.css"; // adding regular will break all solid
 import "@fortawesome/fontawesome-free/css/brands.css";
 import "@fortawesome/fontawesome-free/css/fontawesome.css";
 
-import React from "react";
-import { storiesOf } from "@storybook/react";
-import Network from "../web/Network";
 import { Toaster } from "@blueprintjs/core";
-import { companyToIconCode, ouiToIconCode } from "../web/helpers";
+import { storiesOf } from "@storybook/react";
 import { interpolateLab } from "d3-interpolate";
+import React from "react";
+import Network from "../web/Network";
+import { companyToIconCode, ouiToIconCode } from "../web/helpers";
 
 const toaster = Toaster.create({ position: "top-right" });
 

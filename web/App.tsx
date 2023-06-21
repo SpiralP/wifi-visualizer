@@ -1,8 +1,8 @@
 import { IToaster } from "@blueprintjs/core";
-import { status } from "./helpers";
 import React from "react";
 import Websocket from "react-websocket";
 import AddressView from "./AddressView";
+import { status } from "./helpers";
 import { FrameEvent } from "./interfaceTypes";
 
 interface AppProps {
@@ -18,7 +18,7 @@ export class App extends React.Component<AppProps, AppState> {
     connected: false,
   };
 
-  addressView: AddressView | null;
+  addressView: AddressView | null = null;
 
   handleMessage(msg: string) {
     const events: Array<FrameEvent> = JSON.parse(msg);

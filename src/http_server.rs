@@ -4,7 +4,7 @@ use log::{debug, info};
 use std::net::SocketAddr;
 use warp::{path::FullPath, Filter};
 
-include!(concat!(env!("OUT_DIR"), "/parceljs.rs"));
+include!(concat!(env!("OUT_DIR"), "/nodejs_bundle.rs"));
 
 pub async fn start(addr: SocketAddr, capture_type: CaptureType) {
   info!("starting http/websocket server on http://{}/", addr);
@@ -25,7 +25,7 @@ pub async fn start(addr: SocketAddr, capture_type: CaptureType) {
     })
     .or(warp::path::full().map(|path: FullPath| {
       debug!("http {}", path.as_str());
-      PARCELJS.as_reply(path)
+      NODEJS_BUNDLE.as_warp_reply(path)
     }));
 
   warp::serve(routes).bind(addr).await;

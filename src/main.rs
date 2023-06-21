@@ -82,7 +82,7 @@ async fn main() -> Result<()> {
 
   if !no_browser {
     tokio::spawn(async move {
-      tokio::time::delay_for(Duration::from_millis(100)).await;
+      tokio::time::sleep(Duration::from_millis(100)).await;
 
       open::that(format!("http://{}/", http_server_addr)).unwrap();
     });

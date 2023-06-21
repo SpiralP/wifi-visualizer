@@ -1,10 +1,10 @@
-import React from "react";
-import Network from "./Network";
 import { IToaster } from "@blueprintjs/core";
+import React from "react";
 import vis from "vis-network";
+import NetworkElement from "./Network";
 import { companyToIconCode, hashMacs } from "./helpers";
-import { oui } from "./oui";
 import { ConnectionType, MacAddress } from "./interfaceTypes";
+import { oui } from "./oui";
 
 const known = ["98-d6-f7-01-01-00", "48-a4-72-1b-d3-43"];
 
@@ -159,7 +159,7 @@ export default class AddressNetwork extends React.PureComponent<
 
   componentWillReceiveProps(nextProps: AddressNetworkProps) {
     if (nextProps.addresses !== this.props.addresses) {
-      const o = {};
+      const o: Record<string, AddressOptions> = {};
       Object.entries(nextProps.addresses).forEach(([id, address]) => {
         if (address !== this.props.addresses[id]) {
           o[id] = address;
@@ -174,6 +174,6 @@ export default class AddressNetwork extends React.PureComponent<
     const { nodes, edges } = this.state;
     // console.log("AddressManager render", nodes, edges);
     // display: "flex", flexDirection: "row"
-    return <Network nodes={nodes} edges={edges} toaster={toaster} />;
+    return <NetworkElement nodes={nodes} edges={edges} toaster={toaster} />;
   }
 }

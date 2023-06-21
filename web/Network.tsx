@@ -1,24 +1,25 @@
-import { iconNameToCode } from "./helpers";
-import vis from "vis-network";
-import React from "react";
 import { IToaster } from "@blueprintjs/core";
 import copy from "clipboard-copy";
+import React from "react";
+import { DataSet } from "vis-data";
+import { Edge, Network, Node } from "vis-network";
+import { iconNameToCode } from "./helpers";
 
 interface NetworkProps {
-  nodes: { [id: string]: vis.Node };
-  edges: { [id: string]: vis.Edge };
+  nodes: { [id: string]: Node };
+  edges: { [id: string]: Edge };
   toaster: IToaster;
 }
 
 interface NetworkState {}
 
-export default class Network extends React.PureComponent<
+export default class NetworkElement extends React.PureComponent<
   NetworkProps,
   NetworkState
 > {
-  network?: vis.Network;
-  nodes: vis.DataSet<vis.Node> = new vis.DataSet();
-  edges: vis.DataSet<vis.Edge> = new vis.DataSet();
+  network?: Network;
+  nodes: DataSet<Node> = new DataSet();
+  edges: DataSet<Edge> = new DataSet();
 
   containerRef: React.RefObject<HTMLDivElement> = React.createRef();
 
@@ -29,7 +30,7 @@ export default class Network extends React.PureComponent<
       throw new Error("ref not set?");
     }
 
-    this.network = new vis.Network(
+    this.network = new Network(
       containerRef.current,
       { nodes, edges },
       {
@@ -81,8 +82,6 @@ export default class Network extends React.PureComponent<
     window.edges = this.edges;
     // @ts-ignore
     window.nodes = this.nodes;
-    // @ts-ignore
-    window.vis = vis;
 
     Object.entries(this.props.nodes).forEach(([id, node]) => {
       this.updateNode(id, node);
@@ -119,13 +118,13 @@ export default class Network extends React.PureComponent<
     }
   }
 
-  updateNode(id: string, node: vis.Node) {
+  updateNode(id: string, node: Node) {
     // console.log(`Network updateNode ${id}`);
     node.id = id;
     this.nodes.update(node);
   }
 
-  updateEdge(id: string, edge: vis.Edge) {
+  updateEdge(id: string, edge: Edge) {
     // console.log(`Network updateEdge ${id}`);
 
     edge.id = id;

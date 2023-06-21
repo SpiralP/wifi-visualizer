@@ -1,6 +1,7 @@
+import { Buffer } from "buffer";
 import jsesc from "jsesc";
 import memoizee from "memoizee";
-import { FrameEvent, ByteArray } from "./interfaceTypes";
+import { ByteArray, FrameEvent } from "./interfaceTypes";
 
 export const isBroadcast = memoizee(function isBroadcast(mac: string): boolean {
   return (parseInt(`${mac[0]}${mac[1]}`, 16) & 0b01) != 0;
@@ -14,13 +15,13 @@ export const hashMacs = memoizee(function hashMacs(
   else return `${mac2}${mac1}`;
 });
 
-const namedTimeouts = {};
+const namedTimeouts: Record<string, NodeJS.Timeout> = {};
 export function setNamedTimeout(
   name: string,
   callback: () => void,
   time: number
 ) {
-  if (namedTimeouts[name]) {
+  if (namedTimeouts[name] !== undefined) {
     clearTimeout(namedTimeouts[name]);
   }
 
@@ -47,7 +48,7 @@ export const iconNameToCode = {
 };
 
 // tslint:disable-next-line:object-literal-key-quotes
-export const ouiToIconCode = {
+export const ouiToIconCode: Record<string, string> = {
   "2Wire": iconNameToCode.broadcast_tower,
   "ABB/Tropos": iconNameToCode.broadcast_tower,
   "Cisco Linksys": iconNameToCode.broadcast_tower,
@@ -112,7 +113,7 @@ export async function connect(callback: (event: FrameEvent) => void) {
   };
 
   // wait for onopen
-  await new Promise((resolve, reject) => {
+  await new Promise<void>((resolve, reject) => {
     ws.onerror = function error(err) {
       reject(err);
     };
@@ -122,7 +123,7 @@ export async function connect(callback: (event: FrameEvent) => void) {
   });
 
   // wait for onclose
-  await new Promise((resolve, reject) => {
+  await new Promise<void>((resolve, reject) => {
     ws.onerror = function error(err) {
       reject(err);
     };

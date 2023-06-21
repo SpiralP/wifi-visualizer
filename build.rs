@@ -1,3 +1,3 @@
 fn main() {
-  parceljs_builder::build();
+    nodejs_bundler_codegen::build();
 }
